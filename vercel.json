@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/calculate", "destination": "/api/calculate.js" },
+    { "source": "/(.*)", "destination": "/public/$1" }
+  ]
+}
