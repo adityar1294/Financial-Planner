@@ -1020,6 +1020,31 @@
     let chartMode = 'line'; // 'line' | 'bar'
     let lastChartArgs = null;
 
+    const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentGlobalDate = new Date();
+    const currentGlobalMonth = currentGlobalDate.getMonth();
+    const currentGlobalYear = currentGlobalDate.getFullYear();
+
+    function getMonthSelectHTML(selectedMonth = 0, className = "g-month") {
+        return `<select class="${className}" style="padding: 8px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-main);">
+            ${MONTH_NAMES.map((name, idx) => `<option value="${idx}" ${idx === selectedMonth ? 'selected' : ''}>${name}</option>`).join('')}
+        </select>`;
+    }
+
+    function getYearsAway(monthVal, yearVal) {
+        const m = parseInt(monthVal) || 0;
+        const y = parseInt(yearVal) || currentGlobalYear;
+        const diffMonths = (y - currentGlobalYear) * 12 + (m - currentGlobalMonth);
+        return Math.max(0, diffMonths / 12);
+    }
+
+    function getMonthAndYearFromOffset(yearsOffset) {
+        const totalMonths = Math.round((parseFloat(yearsOffset) || 0) * 12);
+        const targetMonthIndex = (currentGlobalMonth + totalMonths) % 12;
+        const targetYear = currentGlobalYear + Math.floor((currentGlobalMonth + totalMonths) / 12);
+        return { month: targetMonthIndex, year: targetYear };
+    }
+
     function toggleChartMode() {
         chartMode = chartMode === 'line' ? 'bar' : 'line';
         const btn = document.getElementById('chartToggleBtn');
@@ -1094,38 +1119,23 @@
         const tbody = document.getElementById('sabbaticalTable').getElementsByTagName('tbody')[0];
         const row = tbody.insertRow();
         
-        let startY = '', startM = '';
+        let startMonth = currentGlobalMonth;
+        let startYear = currentGlobalYear + 4;
         if (start !== "") {
-            const startVal = parseFloat(start) || 0;
-            startY = Math.floor(startVal);
-            startM = Math.round((startVal - startY) * 12);
-        }
-        
-        let durY = '', durM = '';
-        if (duration !== "") {
-            const durVal = parseFloat(duration) || 0;
-            durY = Math.floor(durVal);
-            durM = Math.round((durVal - durY) * 12);
+            const dt = getMonthAndYearFromOffset(start);
+            startMonth = dt.month;
+            startYear = dt.year;
         }
 
         row.innerHTML = `
             <td><input type="text" value="${name}" class="s-name" placeholder="e.g. MBA, Travel year"></td>
             <td>
                 <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="number" value="${startY}" class="s-start-years" placeholder="4" style="width: 55px;" min="0">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">y</span>
-                    <input type="number" value="${startM}" class="s-start-months" placeholder="0" style="width: 50px;" min="0" max="11">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">m</span>
+                    ${getMonthSelectHTML(startMonth, "s-start-month")}
+                    <input type="number" value="${startYear}" class="s-start-year" placeholder="${currentGlobalYear + 4}" style="width: 65px;">
                 </div>
             </td>
-            <td>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="number" value="${durY}" class="s-duration-years" placeholder="1" style="width: 55px;" min="0">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">y</span>
-                    <input type="number" value="${durM}" class="s-duration-months" placeholder="0" style="width: 50px;" min="0" max="11">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">m</span>
-                </div>
-            </td>
+            <td><input type="number" value="${duration}" class="s-duration" placeholder="1" style="width: 60px;" step="0.1" min="0"></td>
             <td><input type="number" value="${cost}" class="s-cost" placeholder="150000"></td>
             <td><button class="delete-btn" onclick="removeRow(this, 'sabbaticalTable')">✕</button></td>
         `;
@@ -1139,12 +1149,12 @@
         if (emptyMsg) emptyMsg.remove();
         const hasLoan = down < 100;
         
-        let yrsVal = '';
-        let mosVal = '';
+        let gMonth = currentGlobalMonth;
+        let gYear = currentGlobalYear + 7;
         if (years !== "") {
-            const totalYears = parseFloat(years) || 0;
-            yrsVal = Math.floor(totalYears);
-            mosVal = Math.round((totalYears - yrsVal) * 12);
+            const dt = getMonthAndYearFromOffset(years);
+            gMonth = dt.month;
+            gYear = dt.year;
         }
 
         const card = document.createElement('div');
@@ -1170,12 +1180,12 @@
                     </div>
                     <div class="form-group" style="display: flex; gap: 8px;">
                         <div style="flex: 1;">
-                            <label>Years Away</label>
-                            <input type="number" value="${yrsVal}" class="g-years" placeholder="7" min="0" style="width: 100%;">
+                            <label>Target Month</label>
+                            ${getMonthSelectHTML(gMonth, "g-month")}
                         </div>
                         <div style="flex: 1;">
-                            <label>Months Away</label>
-                            <input type="number" value="${mosVal}" class="g-months" placeholder="0" min="0" max="11" style="width: 100%;">
+                            <label>Target Year</label>
+                            <input type="number" value="${gYear}" class="g-year" placeholder="${currentGlobalYear + 7}" style="width: 100%;">
                         </div>
                     </div>
                     <div class="form-group">
@@ -1216,7 +1226,7 @@
                 </div>
             </div>`;
         container.appendChild(card);
-        const inputs = card.querySelectorAll('.g-cost, .g-down, .g-tenure, .g-rate, .g-inflation, .g-years, .g-months');
+        const inputs = card.querySelectorAll('.g-cost, .g-down, .g-tenure, .g-rate, .g-inflation, .g-month, .g-year');
         inputs.forEach(inp => inp.addEventListener('input', () => updateEmiPreview(card)));
         if (hasLoan) updateEmiPreview(card);
     }
@@ -1238,7 +1248,7 @@
         if (!loanToggle || !loanToggle.checked) return;
         const cost = parseFloat(card.querySelector('.g-cost').value) || 0;
         const inf = (parseFloat(card.querySelector('.g-inflation').value) || 6) / 100;
-        const yrs = (parseFloat(card.querySelector('.g-years').value) || 0) + (parseFloat(card.querySelector('.g-months').value) || 0) / 12;
+        const yrs = getYearsAway(card.querySelector('.g-month').value, card.querySelector('.g-year').value);
         const down = (parseFloat(card.querySelector('.g-down').value) || 100) / 100;
         const tenure = parseInt(card.querySelector('.g-tenure').value) || 0;
         const rate = (parseFloat(card.querySelector('.g-rate').value) || 0) / 100;
@@ -1290,12 +1300,12 @@
         const tbody = document.getElementById('loansTable').getElementsByTagName('tbody')[0];
         const row = tbody.insertRow();
         
-        let yrsVal = '';
-        let mosVal = '';
+        let lMonth = currentGlobalMonth;
+        let lYear = currentGlobalYear + 3;
         if (years !== "") {
-            const totalYears = parseFloat(years) || 0;
-            yrsVal = Math.floor(totalYears);
-            mosVal = Math.round((totalYears - yrsVal) * 12);
+            const dt = getMonthAndYearFromOffset(years);
+            lMonth = dt.month;
+            lYear = dt.year;
         }
 
         row.innerHTML = `
@@ -1303,10 +1313,8 @@
             <td><input type="number" value="${emi}" class="l-emi" placeholder="35000"></td>
             <td>
                 <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="number" value="${yrsVal}" class="l-years" placeholder="3" style="width: 55px;" min="0">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">y</span>
-                    <input type="number" value="${mosVal}" class="l-months" placeholder="0" style="width: 50px;" min="0" max="11">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">m</span>
+                    ${getMonthSelectHTML(lMonth, "l-end-month")}
+                    <input type="number" value="${lYear}" class="l-end-year" placeholder="${currentGlobalYear + 3}" style="width: 65px;">
                 </div>
             </td>
             <td>
@@ -1323,12 +1331,12 @@
         const tbody = document.getElementById('inflowsTable').getElementsByTagName('tbody')[0];
         const row = tbody.insertRow();
         
-        let yrsVal = '';
-        let mosVal = '';
+        let iMonth = currentGlobalMonth;
+        let iYear = currentGlobalYear + 6;
         if (year !== "") {
-            const totalYears = parseFloat(year) || 0;
-            yrsVal = Math.floor(totalYears);
-            mosVal = Math.round((totalYears - yrsVal) * 12);
+            const dt = getMonthAndYearFromOffset(year);
+            iMonth = dt.month;
+            iYear = dt.year;
         }
 
         row.innerHTML = `
@@ -1336,10 +1344,8 @@
             <td><input type="number" value="${amount}" class="i-amount" placeholder="2500000"></td>
             <td>
                 <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="number" value="${yrsVal}" class="i-year" placeholder="6" style="width: 55px;" min="0">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">y</span>
-                    <input type="number" value="${mosVal}" class="i-year-months" placeholder="0" style="width: 50px;" min="0" max="11">
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">m</span>
+                    ${getMonthSelectHTML(iMonth, "i-month")}
+                    <input type="number" value="${iYear}" class="i-year" placeholder="${currentGlobalYear + 6}" style="width: 65px;">
                 </div>
             </td>
             <td><button class="delete-btn" onclick="removeRow(this, 'inflowsTable')">✕</button></td>
@@ -1397,8 +1403,8 @@
         document.querySelectorAll('#sabbaticalTable tbody tr:not(.empty-row)').forEach(row => {
             sabbaticals.push({
                 name: row.querySelector('.s-name').value,
-                start: (parseFloat(row.querySelector('.s-start-years').value) || 0) + (parseFloat(row.querySelector('.s-start-months').value) || 0) / 12,
-                duration: (parseFloat(row.querySelector('.s-duration-years').value) || 0) + (parseFloat(row.querySelector('.s-duration-months').value) || 0) / 12,
+                start: getYearsAway(row.querySelector('.s-start-month').value, row.querySelector('.s-start-year').value),
+                duration: parseFloat(row.querySelector('.s-duration').value) || 0,
                 cost: parseFloat(row.querySelector('.s-cost').value) || 0
             });
         });
@@ -1423,7 +1429,7 @@
                 name: card.querySelector('.g-name').value,
                 type: card.querySelector('.g-type').value,
                 cost: parseFloat(card.querySelector('.g-cost').value) || 0,
-                years: (parseFloat(card.querySelector('.g-years').value) || 0) + (parseFloat(card.querySelector('.g-months').value) || 0) / 12,
+                years: getYearsAway(card.querySelector('.g-month').value, card.querySelector('.g-year').value),
                 duration: parseInt(card.querySelector('.g-duration').value) || 1,
                 inflation: parseFloat(card.querySelector('.g-inflation').value) || 6,
                 hasLoan: hasLoan,
@@ -1439,7 +1445,7 @@
             currentLoans.push({
                 name: row.querySelector('.l-name').value,
                 emi: parseFloat(row.querySelector('.l-emi').value) || 0,
-                years: (parseFloat(row.querySelector('.l-years').value) || 0) + (parseFloat(row.querySelector('.l-months').value) || 0) / 12,
+                years: getYearsAway(row.querySelector('.l-end-month').value, row.querySelector('.l-end-year').value),
                 redirect: row.querySelector('.l-redirect') ? row.querySelector('.l-redirect').checked : true
             });
         });
@@ -1450,7 +1456,7 @@
             windfalls.push({
                 name: row.querySelector('.i-name').value,
                 amount: parseFloat(row.querySelector('.i-amount').value) || 0,
-                year: (parseFloat(row.querySelector('.i-year').value) || 0) + (parseFloat(row.querySelector('.i-year-months').value) || 0) / 12
+                year: getYearsAway(row.querySelector('.i-month').value, row.querySelector('.i-year').value)
             });
         });
 
@@ -1906,8 +1912,8 @@
         document.querySelectorAll('#sabbaticalTable tbody tr:not(.empty-row)').forEach(r => {
             profile.sabbaticals.push({
                 name: r.querySelector('.s-name').value,
-                start: (parseFloat(r.querySelector('.s-start-years').value) || 0) + (parseFloat(r.querySelector('.s-start-months').value) || 0) / 12,
-                duration: (parseFloat(r.querySelector('.s-duration-years').value) || 0) + (parseFloat(r.querySelector('.s-duration-months').value) || 0) / 12,
+                start: getYearsAway(r.querySelector('.s-start-month').value, r.querySelector('.s-start-year').value),
+                duration: parseFloat(r.querySelector('.s-duration').value) || 0,
                 cost: r.querySelector('.s-cost').value
             });
         });
@@ -1917,7 +1923,7 @@
             profile.goals.push({
                 name: card.querySelector('.g-name').value, type: card.querySelector('.g-type').value,
                 cost: card.querySelector('.g-cost').value, 
-                years: (parseFloat(card.querySelector('.g-years').value) || 0) + (parseFloat(card.querySelector('.g-months').value) || 0) / 12,
+                years: getYearsAway(card.querySelector('.g-month').value, card.querySelector('.g-year').value),
                 duration: card.querySelector('.g-duration').value, inflation: card.querySelector('.g-inflation').value,
                 hasLoan, down: card.querySelector('.g-down').value, tenure: card.querySelector('.g-tenure').value, rate: card.querySelector('.g-rate').value
             });
@@ -1929,7 +1935,7 @@
             profile.loans.push({
                 name: r.querySelector('.l-name').value,
                 emi: r.querySelector('.l-emi').value,
-                years: (parseFloat(r.querySelector('.l-years').value) || 0) + (parseFloat(r.querySelector('.l-months').value) || 0) / 12,
+                years: getYearsAway(r.querySelector('.l-end-month').value, r.querySelector('.l-end-year').value),
                 redirect: r.querySelector('.l-redirect') ? r.querySelector('.l-redirect').checked : true
             });
         });
@@ -1937,7 +1943,7 @@
             profile.windfalls.push({
                 name: r.querySelector('.i-name').value,
                 amount: r.querySelector('.i-amount').value,
-                year: (parseFloat(r.querySelector('.i-year').value) || 0) + (parseFloat(r.querySelector('.i-year-months').value) || 0) / 12
+                year: getYearsAway(r.querySelector('.i-month').value, r.querySelector('.i-year').value)
             });
         });
         document.querySelectorAll('#retirementIncomeTable tbody tr:not(.empty-row)').forEach(r => {
