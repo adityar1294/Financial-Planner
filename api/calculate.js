@@ -678,8 +678,8 @@ function runSimulation(config, retirementDate, instrumentParams) {
     // Identification of Sabbaticals pausing
     const activeMonths = new Array(totalMonthsAccumulation).fill(true);
     for (const s of config.rawSabbaticals || []) {
-        const startMonth = s.start * 12;
-        const endMonth = (s.start + s.duration) * 12;
+        const startMonth = Math.round(s.start * 12);
+        const endMonth = Math.round((s.start + s.duration) * 12);
         for (let m = startMonth; m < endMonth; m++) {
             if (m >= 0 && m < totalMonthsAccumulation) {
                 activeMonths[m] = false;
@@ -727,7 +727,7 @@ function runSimulation(config, retirementDate, instrumentParams) {
     // Redirected EMIs
     for (const l of config.rawLoans || []) {
         if (l.redirect) {
-            const startM = l.years * 12;
+            const startM = Math.round(l.years * 12);
             let currentRedStart = null;
             let redStreamIndex = 1;
             
@@ -1455,14 +1455,14 @@ module.exports = async (req, res) => {
                 rawStepUp: stepUp,
                 rawSabbaticals: (payload.sabbaticals || []).map(s => ({
                     name: s.name || "Sabbatical",
-                    start: parseInt(s.start) || 0,
-                    duration: parseInt(s.duration) || 0,
+                    start: parseFloat(s.start) || 0,
+                    duration: parseFloat(s.duration) || 0,
                     cost: parseFloat(s.cost) || 0
                 })),
                 rawLoans: (payload.loans || []).map(l => ({
                     name: l.name,
                     emi: parseFloat(l.emi) || 0,
-                    years: parseInt(l.years) || 0,
+                    years: parseFloat(l.years) || 0,
                     redirect: l.redirect !== false
                 })),
                 rawSideIncomes: (payload.sideIncomes || []).map(s => ({
@@ -1482,11 +1482,11 @@ module.exports = async (req, res) => {
                     nature: "Non-replenishing",
                     structure: "Recurring",
                     start_date_mode: "Fixed",
-                    start_date: formatISO(addMonths(currentDate, s.start * 12)),
+                    start_date: formatISO(addMonths(currentDate, Math.round(s.start * 12))),
                     amount: s.cost,
                     frequency: "Monthly",
                     end_mode: "Occurrences",
-                    occurrences: s.duration * 12,
+                    occurrences: Math.round(s.duration * 12),
                     inflation_percent: inflation * 100
                 });
             }
@@ -1494,7 +1494,7 @@ module.exports = async (req, res) => {
             // Financial Goals
             for (const g of payload.goals || []) {
                 const cost = parseFloat(g.cost) || 0;
-                const years = parseInt(g.years) || 0;
+                const years = parseFloat(g.years) || 0;
                 const duration = parseInt(g.duration) || 1;
                 const inf = (parseFloat(g.inflation) || 6) / 100;
                 const downPercent = g.hasLoan ? (parseFloat(g.down) || 100) / 100 : 1.0;
@@ -1573,7 +1573,7 @@ module.exports = async (req, res) => {
                     amount: l.emi,
                     frequency: "Monthly",
                     end_mode: "Occurrences",
-                    occurrences: l.years * 12,
+                    occurrences: Math.round(l.years * 12),
                     inflation_percent: 0.0
                 });
             }
@@ -1582,7 +1582,7 @@ module.exports = async (req, res) => {
             for (const w of payload.windfalls || []) {
                 config.one_time_investments.push({
                     name: w.name,
-                    date: formatISO(addMonths(currentDate, parseInt(w.year) * 12)),
+                    date: formatISO(addMonths(currentDate, Math.round(parseFloat(w.year) * 12))),
                     amount: parseFloat(w.amount) || 0
                 });
             }
@@ -1756,10 +1756,10 @@ module.exports = async (req, res) => {
                     const totalSip = months.reduce((s, m) => s + m.investment, 0);
                     const totalWithdrawals = months.reduce((s, m) => s + m.payouts, 0);
                     
-                    const isSab = config.rawSabbaticals.some(s => y >= s.start && y < (s.start + s.duration));
+                    const isSab = config.rawSabbaticals.some(s => (y - 1 < s.start + s.duration && y > s.start));
 
                     let emiOut = 0;
-                    config.rawLoans.forEach(loan => { if (y <= loan.years) { emiOut += (loan.emi * 12); } });
+                    config.rawLoans.forEach(loan => { if (y <= Math.ceil(loan.years)) { emiOut += (loan.emi * 12); } });
 
                     displaySimLog.push({
                         year: y,
