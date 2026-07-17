@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wealth Planner — Financial Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-main: #080d18;
+            --bg-card: #0f1729;
+            --bg-card-hover: #131e35;
+            --bg-input: #1a2540;
+            --bg-input-hover: #1e2d4a;
+            --text-main: #e8edf5;
+            --text-muted: #7a8ba8;
+            --text-faint: #4a5a72;
+            --accent: #4f8ef7;
+            --accent-light: #6aa3ff;
+            --accent-glow: rgba(79, 142, 247, 0.12);
+            --accent-gradient: linear-gradient(135deg, #4f8ef7, #7c5cbf);
+            --success: #00d4a0;
+            --success-bg: rgba(0, 212, 160, 0.08);
+            --warning: #f5a623;
+            --danger: #f04e4e;
+            --danger-bg: rgba(240, 78, 78, 0.08);
+            --border: rgba(255,255,255,0.07);
+            --border-hover: rgba(255,255,255,0.12);
+            --shadow: 0 4px 30px rgba(0,0,0,0.4);
+            --radius: 14px;
+            --radius-sm: 8px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-main);
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(79, 142, 247, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(124, 92, 191, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            margin: 0;
+            padding: 0 20px 60px;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* ─── HEADER ─── */
+        header {
+            padding: 40px 0 36px;
+            margin-bottom: 10px;
+        }
+        .header-inner {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+        .header-brand { display: flex; align-items: center; gap: 16px; }
+        .header-icon {
+            width: 52px; height: 52px;
+            background: var(--accent-gradient);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 8px 24px rgba(79,142,247,0.3);
+            flex-shrink: 0;
+        }
+        header h1 {
+            margin: 0 0 4px;
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, #a0bfff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.92rem;
+        }
+        .header-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .meta-chip {
+            background: rgba(79,142,247,0.1);
+            border: 1px solid rgba(79,142,247,0.2);
+            color: var(--accent-light);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        /* ─── SECTION NAV ─── */
+        .section-nav {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 0 0 4px;
+            margin-bottom: 30px;
+            scrollbar-width: none;
+        }
+        .section-nav::-webkit-scrollbar { display: none; }
+        .nav-pill {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-pill:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            color: var(--text-main);
+        }
+        .nav-pill .pill-num {
+            background: rgba(79,142,247,0.15);
+            color: var(--accent);
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+
+        /* ─── CARDS ─── */
+        .card {
+            background: var(--bg-card);
+            padding: 28px 30px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            transition: border-color 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(79,142,247,0.3), transparent);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-icon {
+            width: 38px; height: 38px;
+            background: rgba(79,142,247,0.1);
+            border: 1px solid rgba(79,142,247,0.15);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+        .card-title-group { flex: 1; }
+        h2 {
+            margin: 0 0 3px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.01em;
+        }
+        .card-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+        .section-badge {
+            background: rgba(79,142,247,0.12);
+            color: var(--accent);
+            border: 1px solid rgba(79,142,247,0.2);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.04em;
+        }
+
+        /* ─── HINT BANNERS ─── */
+        .hint {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            background: rgba(79,142,247,0.05);
+            border: 1px solid rgba(79,142,247,0.1);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .hint-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; opacity: 0.7; }
+
+        /* ─── FORMS ─── */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        label {
+            font-weight: 600;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.92rem;
+            color: var(--text-main);
+            transition: all 0.2s;
+            outline: none;
+        }
+        input:hover, select:hover { border-color: var(--border-hover); background: var(--bg-input-hover); }
+        input:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            background: var(--bg-input-hover);
+        }
+        select option { background: #1a2540; }
+
+        /* ─── TABLES ─── */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+        .dynamic-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+        .dynamic-table th {
+            padding: 12px 16px;
+            background: rgba(79,142,247,0.06);
+            font-weight: 700;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border);
+        }
+        .dynamic-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+        .dynamic-table tbody tr:last-child td { border-bottom: none; }
+        .dynamic-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+        .dynamic-table input { padding: 8px 10px; font-size: 0.87rem; }
+        .dynamic-table select { padding: 8px 10px; font-size: 0.87rem; }
+
+        /* Empty state */
+        .empty-row td {
+            text-align: center;
+            color: var(--text-faint);
+            font-style: italic;
+            padding: 32px 16px !important;
+            font-size: 0.85rem;
+        }
+
+        /* ─── LOAN TOGGLE ─── */
+        .loan-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .loan-toggle-container input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+        .loan-fields-wrapper { display: none; margin-top: 8px; gap: 6px; flex-wrap: wrap; }
+        .loan-fields-wrapper.active { display: flex; }
+        .loan-fields-wrapper input { width: 90px; padding: 7px 10px; font-size: 0.83rem; }
+
+        /* ─── GOAL CARDS ─── */
+        .goals-container { display: flex; flex-direction: column; gap: 12px; }
+        .goal-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .goal-card:hover { border-color: var(--border-hover); }
+        .goal-card-main { padding: 16px 18px; }
+        .goal-fields {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1.5fr 1fr 1fr 1fr;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+        .goal-card-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+        .goal-loan-toggle {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        .goal-loan-toggle input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+        .goal-loan-panel {
+            padding: 16px 18px;
+            background: rgba(79,142,247,0.04);
+            border-top: 1px solid rgba(79,142,247,0.1);
+        }
+        .goal-loan-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 14px;
+        }
+        .goal-card-num {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .goals-empty {
+            text-align: center;
+            color: var(--text-faint);
+            font-style: italic;
+            padding: 32px 16px;
+            font-size: 0.85rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        @media (max-width: 900px) { .goal-fields { grid-template-columns: 1fr 1fr 1fr; } }
+        @media (max-width: 600px) { .goal-fields { grid-template-columns: 1fr 1fr; } }
+
+        /* ─── BUTTONS ─── */
+        .btn-container { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.88rem;
+            transition: all 0.2s;
+            letter-spacing: 0.01em;
+        }
+        .btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(79,142,247,0.25);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,142,247,0.35); }
+        .btn-success {
+            background: linear-gradient(135deg, #00d4a0, #00a87e);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(0,212,160,0.2);
+        }
+        .btn-success:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,212,160,0.3); }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-hover);
+            color: var(--text-muted);
+        }
+        .btn-outline:hover { background: var(--bg-input); color: var(--text-main); border-color: var(--accent); }
+        .delete-btn {
+            background: rgba(240,78,78,0.1);
+            border: 1px solid rgba(240,78,78,0.2);
+            color: var(--danger);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+        .delete-btn:hover { background: rgba(240,78,78,0.2); }
+
+        .calculate-btn-wrapper {
+            margin: 30px 0;
+            position: relative;
+        }
+        .calculate-btn-wrapper button {
+            width: 100%;
+            padding: 18px 40px;
+            font-size: 1rem;
+            font-weight: 800;
+            border-radius: var(--radius);
+            background: linear-gradient(135deg, #4f8ef7 0%, #7c5cbf 100%);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 8px 32px rgba(79,142,247,0.3);
+            letter-spacing: 0.02em;
+        }
+        .calculate-btn-wrapper button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(79,142,247,0.45);
+        }
+        .calculate-btn-wrapper button:active { transform: translateY(0); }
+
+        /* ─── METRIC DASHBOARD ─── */
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-bottom: 28px; }
+
+        .metric-box {
+            background: var(--bg-input);
+            padding: 22px 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .metric-box::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: var(--accent-gradient);
+            border-radius: 2px 2px 0 0;
+        }
+        .metric-box.status-surplus::after { background: linear-gradient(90deg, var(--success), #00a87e); }
+        .metric-box.status-deficit::after { background: linear-gradient(90deg, var(--danger), #c43030); }
+
+        .metric-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .metric-box label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.07em;
+        }
+        .metric-icon {
+            width: 34px; height: 34px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+            background: rgba(79,142,247,0.1);
+            border: 1px solid rgba(79,142,247,0.15);
+        }
+        .metric-box.status-surplus .metric-icon { background: var(--success-bg); border-color: rgba(0,212,160,0.2); }
+        .metric-box.status-deficit .metric-icon { background: var(--danger-bg); border-color: rgba(240,78,78,0.2); }
+
+        .metric-val {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.03em;
+            margin-bottom: 6px;
+            line-height: 1;
+        }
+        .metric-sub { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; }
+
+        /* ─── RETIREMENT PROGRESS BAR ─── */
+        .retirement-progress {
+            margin-bottom: 20px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .progress-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+        .progress-age { font-size: 0.9rem; font-weight: 700; color: var(--accent-light); }
+        .progress-track {
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-gradient);
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+        .progress-milestones {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+        .progress-milestone { font-size: 0.75rem; color: var(--text-faint); }
+
+        /* ─── FEASIBILITY CARD ─── */
+        .feasibility-statement-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px 26px;
+            margin-bottom: 22px;
+            line-height: 1.7;
+            font-size: 0.92rem;
+            color: var(--text-main);
+        }
+        .feasibility-statement-card h3 {
+            margin: 0 0 12px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+        .feasibility-statement-card h4 {
+            margin: 18px 0 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+        .feasibility-statement-card ul { margin: 0; padding-left: 20px; }
+        .feasibility-statement-card li { margin-bottom: 8px; color: var(--text-muted); font-size: 0.88rem; }
+        .feasibility-statement-card li strong { color: var(--text-main); }
+        .feasibility-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-right: 10px;
+        }
+        .feasibility-badge.badge-success {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(0,212,160,0.25);
+        }
+        .feasibility-badge.badge-danger {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(240,78,78,0.25);
+        }
+
+        /* ─── CHART ─── */
+        .chart-container {
+            position: relative;
+            margin: 24px 0 4px;
+            height: 380px;
+            background: rgba(0,0,0,0.15);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            padding: 20px;
+        }
+
+        /* ─── TIMELINE TABLE ─── */
+        #timelineTable .dynamic-table { font-size: 0.84rem; }
+        #timelineTable .dynamic-table td:first-child { font-weight: 700; color: var(--accent-light); }
+        #timelineTable .dynamic-table td:last-child { font-weight: 700; color: #fff; }
+
+        /* ─── DIVIDER ─── */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 32px 0 20px;
+            color: var(--text-faint);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+        }
+        .section-divider::before, .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ─── PENDING STATE ─── */
+        .pending-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-faint);
+        }
+        .pending-state .pending-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.4; }
+        .pending-state p { margin: 0; font-size: 0.9rem; }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            body { padding: 0 14px 40px; }
+            .card { padding: 20px; }
+            .header-inner { flex-direction: column; }
+            .form-row { grid-template-columns: 1fr 1fr; }
+            .dashboard { grid-template-columns: 1fr; }
+            header h1 { font-size: 1.5rem; }
+            .failure-options-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* ─── ANIMATIONS ─── */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in { animation: fadeInUp 0.4s ease forwards; }
+
+        /* Counter animation */
+        .counting { transition: all 0.5s ease; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="header-icon">📈</div>
+                <div>
+                    <h1>Wealth Planner</h1>
+                    <p>Full lifecycle financial simulation · Milestone tracking · Retirement architecture</p>
+                </div>
+            </div>
+            <div class="header-meta">
+                <span class="meta-chip" id="headerClientChip">Your Name</span>
+                <span class="meta-chip" id="headerRetirementChip">Retiring at 55</span>
+                <span class="meta-chip" id="headerRiskChip">Aggressive (14%)</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- SECTION NAV -->
+    <nav class="section-nav">
+        <a class="nav-pill" href="#s1"><span class="pill-num">1</span> Profile</a>
+        <a class="nav-pill" href="#s2"><span class="pill-num">2</span> Sabbaticals</a>
+        <a class="nav-pill" href="#s3"><span class="pill-num">3</span> Goals</a>
+        <a class="nav-pill" href="#s4"><span class="pill-num">4</span> Bonuses</a>
+        <a class="nav-pill" href="#s5"><span class="pill-num">5</span> Loans</a>
+        <a class="nav-pill" href="#s6"><span class="pill-num">6</span> Windfalls</a>
+        <a class="nav-pill" href="#s7"><span class="pill-num">7</span> Side Income</a>
+        <a class="nav-pill" href="#s8"><span class="pill-num">8</span> Results</a>
+    </nav>
+
+    <!-- 1. PROFILE -->
+    <div class="card" id="s1">
+        <div class="card-header">
+            <div class="card-icon">👤</div>
+            <div class="card-title-group">
+                <h2>Profile & Baseline</h2>
+                <p class="card-subtitle">Core parameters that drive the entire simulation</p>
+            </div>
+            <span class="section-badge">SECTION 1</span>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="clientName">Client Name</label>
+                <input type="text" id="clientName" value="" placeholder="e.g. Rahul Sharma" oninput="updateHeaderChips()">
+            </div>
+            <div class="form-group">
+                <label for="currentAge">Current Age</label>
+                <input type="number" id="currentAge" value="32" oninput="updateHeaderChips()">
+            </div>
+            <div class="form-group">
+                <label for="retirementAge">Retirement Age</label>
+                <input type="number" id="retirementAge" value="55" oninput="updateHeaderChips()">
+            </div>
+            <div class="form-group">
+                <label for="riskAppetite">Investment Strategy</label>
+                <select id="riskAppetite" onchange="updateHeaderChips()">
+                    <option value="16">Very Aggressive — Equity (16% p.a.)</option>
+                    <option value="14" selected>Aggressive — Equity (14% p.a.)</option>
+                    <option value="12">Balanced Growth (12% p.a.)</option>
+                    <option value="10">Conservative (10% p.a.)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="currentCorpus">Existing Corpus / Seed Capital (₹)</label>
+                <input type="number" id="currentCorpus" value="2500000">
+            </div>
+            <div class="form-group">
+                <label for="currentSip">Current Monthly SIP (₹)</label>
+                <input type="number" id="currentSip" value="35000">
+            </div>
+            <div class="form-group">
+                <label for="monthlyExpense">Monthly Lifestyle Spend (₹)</label>
+                <input type="number" id="monthlyExpense" value="200000">
+            </div>
+            <div class="form-group">
+                <label for="inflation">Lifestyle Inflation (% p.a.)</label>
+                <input type="number" id="inflation" value="6">
+            </div>
+            <div class="form-group">
+                <label for="stepUp">Annual SIP Step-Up (%)</label>
+                <input type="number" id="stepUp" value="10">
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="retirement-progress" id="retirementProgressCard">
+            <div class="progress-header">
+                <span class="progress-label">Accumulation Timeline</span>
+                <span class="progress-age" id="progressAgeLabel">23 years to retirement</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-milestones">
+                <span class="progress-milestone" id="progressStart">Age 32 — Now</span>
+                <span class="progress-milestone" id="progressMid"></span>
+                <span class="progress-milestone" id="progressEnd">Age 55 — Retire</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. SABBATICALS -->
+    <div class="card" id="s2">
+        <div class="card-header">
+            <div class="card-icon">🧳</div>
+            <div class="card-title-group">
+                <h2>Career Sabbaticals</h2>
+                <p class="card-subtitle">Planned breaks where income stops and lifestyle draws from your portfolio</p>
+            </div>
+            <span class="section-badge">SECTION 2</span>
+        </div>
+        <div class="hint">
+            <span class="hint-icon">💡</span>
+            During a sabbatical, SIP contributions drop to zero and an inflation-adjusted lifestyle budget is drawn from the portfolio each year.
+        </div>
+        <div class="table-responsive">
+            <table class="dynamic-table" id="sabbaticalTable">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Starts (Years from Now)</th>
+                        <th>Duration (Years)</th>
+                        <th>Monthly Budget — Today's ₹</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="btn-container">
+            <button class="btn-outline" onclick="addSabbaticalField()">＋ Add Sabbatical</button>
+        </div>
+    </div>
+
+    <!-- 3. GOALS -->
+    <div class="card" id="s3">
+        <div class="card-header">
+            <div class="card-icon">🎯</div>
+            <div class="card-title-group">
+                <h2>Financial Goals & Milestones</h2>
+                <p class="card-subtitle">Future capital needs with automatic 5-year glide path (Equity → Hybrid → Debt)</p>
+            </div>
+            <span class="section-badge">SECTION 3</span>
+        </div>
+        <div class="hint">
+            <span class="hint-icon">💡</span>
+            Each goal supports an optional loan: click "Partly funded by loan" on any goal to expand mortgage details and see the projected monthly EMI.
+        </div>
+        <div class="goals-container" id="goalsContainer">
+            <div class="goals-empty">No goals added yet. Click the button below to add one.</div>
+        </div>
+        <div class="btn-container">
+            <button class="btn-outline" onclick="addGoalField()">＋ Add Goal</button>
+        </div>
+    </div>
+
+    <!-- 4. BONUSES -->
+    <div class="card" id="s4">
+        <div class="card-header">
+            <div class="card-icon">💰</div>
+            <div class="card-title-group">
+                <h2>Recurring Bonuses & Payouts</h2>
+                <p class="card-subtitle">Annual bonuses and periodic inflows that compound independently via their own step-up</p>
+            </div>
+            <span class="section-badge">SECTION 4</span>
+        </div>
+        <div class="table-responsive">
+            <table class="dynamic-table" id="recurringLumpsumTable">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Base Amount (₹)</th>
+                        <th>Frequency</th>
+                        <th>Annual Step-Up %</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="btn-container">
+            <button class="btn-outline" onclick="addRecurringLumpsumField('Corporate Annual Bonus', 300000, 'Annual', 7)">＋ Add Bonus / Payout</button>
+        </div>
+    </div>
+
+    <!-- 5. LOANS -->
+    <div class="card" id="s5">
+        <div class="card-header">
+            <div class="card-icon">🏦</div>
+            <div class="card-title-group">
+                <h2>Existing Loans & EMIs</h2>
+                <p class="card-subtitle">Once a loan ends, freed cash is automatically redirected to your investment pool</p>
+            </div>
+            <span class="section-badge">SECTION 5</span>
+        </div>
+        <div class="table-responsive">
+            <table class="dynamic-table" id="loansTable">
+                <thead>
+                    <tr>
+                        <th>Loan Name</th>
+                        <th>Monthly EMI (₹)</th>
+                        <th>Remaining Tenure (Years)</th>
+                        <th>On Payoff</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="btn-container">
+            <button class="btn-outline" onclick="addLoanField()">＋ Add Existing Loan</button>
+        </div>
+    </div>
+
+    <!-- 6. WINDFALLS -->
+    <div class="card" id="s6">
+        <div class="card-header">
+            <div class="card-icon">⚡</div>
+            <div class="card-title-group">
+                <h2>One-Time Windfalls</h2>
+                <p class="card-subtitle">RSU vests, inheritance, property sale proceeds — injected directly into equity at occurrence year</p>
+            </div>
+            <span class="section-badge">SECTION 6</span>
+        </div>
+        <div class="table-responsive">
+            <table class="dynamic-table" id="inflowsTable">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Amount (₹)</th>
+                        <th>Year of Occurrence</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="btn-container">
+            <button class="btn-outline" onclick="addInflowField()">＋ Add Windfall</button>
+        </div>
+    </div>
+
+    <!-- 7. RETIREMENT INCOME -->
+    <div class="card" id="s7">
+        <div class="card-header">
+            <div class="card-icon">🏠</div>
+            <div class="card-title-group">
+                <h2>Post-Retirement Side Income</h2>
+                <p class="card-subtitle">Rental yield, pension, royalties — reduces the corpus needed to sustain your lifestyle</p>
+            </div>
+            <span class="section-badge">SECTION 7</span>
+        </div>
+        <div class="table-responsive">
+            <table class="dynamic-table" id="retirementIncomeTable">
+                <thead>
+                    <tr>
+                        <th>Income Source</th>
+                        <th>Monthly Value — Today's ₹</th>
+                        <th>Annual Growth %</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="btn-container">
+            <button class="btn-outline" onclick="addRetirementIncomeField()">＋ Add Side Income Stream</button>
+        </div>
+    </div>
+
+    <!-- SAVE / LOAD -->
+    <div class="card" style="margin-bottom:0;">
+        <div class="card-header" style="margin-bottom:0;padding-bottom:0;border-bottom:none;">
+            <div class="card-icon">💾</div>
+            <div class="card-title-group">
+                <h2>Save & Import Client Profile</h2>
+                <p class="card-subtitle">Export all inputs to JSON · Import a previously saved plan</p>
+            </div>
+        </div>
+        <div class="btn-container" style="margin-top:16px;">
+            <button class="btn-success" onclick="saveProfile()">⬇ Save Profile (JSON)</button>
+            <button class="btn-outline" onclick="document.getElementById('importFileInput').click()">⬆ Import Profile</button>
+            <input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importProfile(event)">
+        </div>
+    </div>
+
+    <!-- CALCULATE -->
+    <div class="calculate-btn-wrapper">
+        <button onclick="calculatePlan()">⚡ Run Full Lifecycle Simulation</button>
+    </div>
+
+    <!-- 8. RESULTS -->
+    <div class="card" id="s8">
+        <div class="card-header">
+            <div class="card-icon">📊</div>
+            <div class="card-title-group">
+                <h2>Results & Feasibility Audit</h2>
+                <p class="card-subtitle">Simulation output based on your inputs above</p>
+            </div>
+            <span class="section-badge">SECTION 8</span>
+        </div>
+
+        <div id="resultsArea">
+            <div class="pending-state">
+                <div class="pending-icon">🔮</div>
+                <p>Run the simulation above to see your financial blueprint.</p>
+            </div>
+        </div>
+
+        <div id="exportBtnWrapper" style="display:none; margin-top: 16px;">
+            <button class="btn-success" onclick="exportPDF()">⬇ Export as PDF</button>
+        </div>
+    </div>
+
+    <!-- 9. TIMELINE -->
+    <div class="card" id="s9">
+        <div class="card-header">
+            <div class="card-icon">📅</div>
+            <div class="card-title-group">
+                <h2>Year-by-Year Timeline</h2>
+                <p class="card-subtitle">Detailed annual allocation ledger across all three portfolio pools</p>
+            </div>
+            <span class="section-badge">SECTION 9</span>
+        </div>
+        <div class="table-responsive">
+            <table class="dynamic-table" id="timelineTable">
+                <thead>
+                    <tr>
+                        <th>Age</th>
+                        <th>Year</th>
+                        <th>Monthly SIP</th>
+                        <th>EMI Burden</th>
+                        <th>Withdrawals</th>
+                        <th>Equity Pool</th>
+                        <th>Hybrid Buffer</th>
+                        <th>Debt Vault</th>
+                        <th>Total Net Worth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="empty-row"><td colspan="9">Run the simulation to populate the timeline.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let strategyChartInstance = null;
+    let chartMode = 'line'; // 'line' | 'bar'
+    let lastChartArgs = null;
+
+    function toggleChartMode() {
+        chartMode = chartMode === 'line' ? 'bar' : 'line';
+        const btn = document.getElementById('chartToggleBtn');
+        if (btn) btn.textContent = chartMode === 'line' ? '📊 Switch to Bar View' : '📈 Switch to Line View';
+        if (lastChartArgs) renderAllocationChart(...lastChartArgs);
+    }
+
+    window.onload = function() {
+        addSabbaticalField("INSEAD Executive MBA", 4, 1, 150000);
+        addGoalField("Luxury Real Estate", "Lumpsum", 10000000, 7, 1, 7, 40, 10, 8.5);
+        addLoanField("Car Loan EMI", 35000, 3);
+        addInflowField("Tech Startup RSU Vest", 2500000, 6);
+        addRetirementIncomeField("Commercial Rental Income", 60000, 4.5);
+        addRecurringLumpsumField("Corporate Annual Bonus", 300000, "Annual", 7);
+        updateHeaderChips();
+        updateProgressBar();
+        document.getElementById('currentAge').addEventListener('input', updateProgressBar);
+        document.getElementById('retirementAge').addEventListener('input', updateProgressBar);
+        calculatePlan();
+    }
+
+    function updateHeaderChips() {
+        const name = document.getElementById('clientName').value.trim() || 'Your Name';
+        const retAge = document.getElementById('retirementAge').value;
+        const riskSel = document.getElementById('riskAppetite');
+        const riskText = riskSel.options[riskSel.selectedIndex].text.split('—')[0].trim();
+        document.getElementById('headerClientChip').textContent = name;
+        document.getElementById('headerRetirementChip').textContent = `Retiring at ${retAge}`;
+        document.getElementById('headerRiskChip').textContent = riskText;
+        updateProgressBar();
+    }
+
+    function updateProgressBar() {
+        const curAge = parseInt(document.getElementById('currentAge').value) || 32;
+        const retAge = parseInt(document.getElementById('retirementAge').value) || 55;
+        const lifespan = 90;
+        const yearsLeft = Math.max(0, retAge - curAge);
+        const pct = Math.max(0, Math.min(100, (curAge / retAge) * 100));
+        const midAge = Math.round((curAge + retAge) / 2);
+
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressAgeLabel').textContent = yearsLeft + ' year' + (yearsLeft !== 1 ? 's' : '') + ' to retirement';
+        document.getElementById('progressStart').textContent = `Age ${curAge} — Now`;
+        document.getElementById('progressMid').textContent = `Age ${midAge}`;
+        document.getElementById('progressEnd').textContent = `Age ${retAge} — Retire`;
+    }
+
+    function toggleLoanFields(checkbox) {
+        const wrapper = checkbox.parentElement.nextElementSibling;
+        if(checkbox.checked) { wrapper.classList.add('active'); }
+        else { wrapper.classList.remove('active'); wrapper.querySelectorAll('input').forEach(i => i.value = i.getAttribute('data-default') || 0); }
+    }
+
+    function toggleDurationField(selectElem) {
+        const card = selectElem.closest('.goal-card');
+        const container = card || selectElem.closest('tr');
+        if (!container) return;
+        const durationInput = container.querySelector('.g-duration');
+        if (!durationInput) return;
+        if (selectElem.value === "Lumpsum") { durationInput.value = 1; durationInput.disabled = true; }
+        else { durationInput.disabled = false; }
+    }
+
+    function removeEmptyRow(tableId) {
+        const tbody = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+        const emptyRow = tbody.querySelector('.empty-row');
+        if (emptyRow) emptyRow.remove();
+    }
+
+    function addSabbaticalField(name="", start="", duration="", cost="") {
+        removeEmptyRow('sabbaticalTable');
+        const tbody = document.getElementById('sabbaticalTable').getElementsByTagName('tbody')[0];
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" value="${name}" class="s-name" placeholder="e.g. MBA, Travel year"></td>
+            <td><input type="number" value="${start}" class="s-start" placeholder="4"></td>
+            <td><input type="number" value="${duration}" class="s-duration" placeholder="1"></td>
+            <td><input type="number" value="${cost}" class="s-cost" placeholder="150000"></td>
+            <td><button class="delete-btn" onclick="removeRow(this, 'sabbaticalTable')">✕</button></td>
+        `;
+    }
+
+    let goalCounter = 0;
+    function addGoalField(name="", type="Lumpsum", cost="", years="", duration=1, inf=6, down=100, tenure=0, rate=0) {
+        goalCounter++;
+        const container = document.getElementById('goalsContainer');
+        const emptyMsg = container.querySelector('.goals-empty');
+        if (emptyMsg) emptyMsg.remove();
+        const hasLoan = down < 100;
+        const card = document.createElement('div');
+        card.className = 'goal-card';
+        card.innerHTML = `
+            <div class="goal-card-main">
+                <span class="goal-card-num">Goal ${goalCounter}</span>
+                <div class="goal-fields">
+                    <div class="form-group">
+                        <label>Goal Name</label>
+                        <input type="text" value="${name}" class="g-name" placeholder="e.g. Home Purchase">
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select class="g-type" onchange="toggleDurationField(this)">
+                            <option value="Lumpsum" ${type==="Lumpsum"?"selected":""}>Lumpsum</option>
+                            <option value="Recurring" ${type==="Recurring"?"selected":""}>Recurring</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Today's Value (₹)</label>
+                        <input type="number" value="${cost}" class="g-cost" placeholder="10000000">
+                    </div>
+                    <div class="form-group">
+                        <label>Years Away</label>
+                        <input type="number" value="${years}" class="g-years" placeholder="7">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (Yrs)</label>
+                        <input type="number" value="${duration}" class="g-duration" ${type==="Lumpsum"?"disabled":""}>
+                    </div>
+                    <div class="form-group">
+                        <label>Inflation %</label>
+                        <input type="number" value="${inf}" class="g-inflation" step="0.1">
+                    </div>
+                </div>
+                <div class="goal-card-actions">
+                    <label class="goal-loan-toggle">
+                        <input type="checkbox" ${hasLoan?'checked':''} onchange="toggleGoalLoan(this)"> Partly funded by loan
+                    </label>
+                    <button class="delete-btn" onclick="removeGoalCard(this)">✕ Remove</button>
+                </div>
+            </div>
+            <div class="goal-loan-panel" style="${hasLoan?'display:block':'display:none'}">
+                <div style="font-size:0.75rem;font-weight:700;color:var(--accent-light);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Loan / Mortgage Details</div>
+                <div class="goal-loan-fields">
+                    <div class="form-group">
+                        <label>Down Payment %</label>
+                        <input type="number" value="${down}" class="g-down" placeholder="40" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Loan Tenure (Years)</label>
+                        <input type="number" value="${tenure}" class="g-tenure" placeholder="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Interest Rate %</label>
+                        <input type="number" value="${rate}" class="g-rate" placeholder="8.5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Projected Monthly EMI</label>
+                        <div style="padding:10px 14px;background:rgba(0,212,160,0.06);border:1px solid rgba(0,212,160,0.15);border-radius:var(--radius-sm);font-size:0.88rem;color:var(--success);font-weight:700;" class="g-emi-preview">Enter details above</div>
+                    </div>
+                </div>
+            </div>`;
+        container.appendChild(card);
+        const inputs = card.querySelectorAll('.g-cost, .g-down, .g-tenure, .g-rate, .g-inflation, .g-years');
+        inputs.forEach(inp => inp.addEventListener('input', () => updateEmiPreview(card)));
+        if (hasLoan) updateEmiPreview(card);
+    }
+
+    function toggleGoalLoan(checkbox) {
+        const card = checkbox.closest('.goal-card');
+        const panel = card.querySelector('.goal-loan-panel');
+        panel.style.display = checkbox.checked ? 'block' : 'none';
+        if (!checkbox.checked) {
+            card.querySelector('.g-down').value = 100;
+            card.querySelector('.g-tenure').value = 0;
+            card.querySelector('.g-rate').value = 0;
+            card.querySelector('.g-emi-preview').textContent = 'Enter details above';
+        }
+    }
+
+    function updateEmiPreview(card) {
+        const loanToggle = card.querySelector('.goal-loan-toggle input[type="checkbox"]');
+        if (!loanToggle || !loanToggle.checked) return;
+        const cost = parseFloat(card.querySelector('.g-cost').value) || 0;
+        const inf = (parseFloat(card.querySelector('.g-inflation').value) || 6) / 100;
+        const yrs = parseInt(card.querySelector('.g-years').value) || 0;
+        const down = (parseFloat(card.querySelector('.g-down').value) || 100) / 100;
+        const tenure = parseInt(card.querySelector('.g-tenure').value) || 0;
+        const rate = (parseFloat(card.querySelector('.g-rate').value) || 0) / 100;
+        const preview = card.querySelector('.g-emi-preview');
+        if (!preview) return;
+        if (cost > 0 && tenure > 0 && rate > 0 && down < 1) {
+            const futureCost = cost * Math.pow(1 + inf, yrs);
+            const loanAmt = futureCost * (1 - down);
+            const r = rate / 12, n = tenure * 12;
+            const emi = (loanAmt * r * Math.pow(1+r, n)) / (Math.pow(1+r, n) - 1);
+            preview.textContent = `₹ ${Math.round(emi).toLocaleString('en-IN')} / mo`;
+        } else {
+            preview.textContent = 'Enter details above';
+        }
+    }
+
+    function removeGoalCard(btn) {
+        const container = document.getElementById('goalsContainer');
+        btn.closest('.goal-card').remove();
+        if (container.children.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'goals-empty';
+            empty.textContent = 'No goals added yet. Click the button below to add one.';
+            container.appendChild(empty);
+        }
+    }
+
+    function addRecurringLumpsumField(name="", amount="", freq="Annual", step=7) {
+        removeEmptyRow('recurringLumpsumTable');
+        const tbody = document.getElementById('recurringLumpsumTable').getElementsByTagName('tbody')[0];
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" value="${name}" class="rl-name" placeholder="e.g. Annual Bonus"></td>
+            <td><input type="number" value="${amount}" class="rl-amount" placeholder="300000"></td>
+            <td>
+                <select class="rl-freq">
+                    <option value="Annual" ${freq==="Annual"?"selected":""}>Annual</option>
+                    <option value="Semi-Annual" ${freq==="Semi-Annual"?"selected":""}>Semi-Annual</option>
+                    <option value="Quarterly" ${freq==="Quarterly"?"selected":""}>Quarterly</option>
+                </select>
+            </td>
+            <td><input type="number" value="${step}" class="rl-step"></td>
+            <td><button class="delete-btn" onclick="removeRow(this, 'recurringLumpsumTable')">✕</button></td>
+        `;
+    }
+
+    function addLoanField(name="", emi="", years="", redirect=true) {
+        removeEmptyRow('loansTable');
+        const tbody = document.getElementById('loansTable').getElementsByTagName('tbody')[0];
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" value="${name}" class="l-name" placeholder="e.g. Car Loan"></td>
+            <td><input type="number" value="${emi}" class="l-emi" placeholder="35000"></td>
+            <td><input type="number" value="${years}" class="l-years" placeholder="3"></td>
+            <td>
+                <label class="loan-toggle-container" title="When this loan is fully paid off, automatically add the freed EMI to your monthly SIP">
+                    <input type="checkbox" class="l-redirect" ${redirect ? 'checked' : ''}> Add to SIP
+                </label>
+            </td>
+            <td><button class="delete-btn" onclick="removeRow(this, 'loansTable')">✕</button></td>
+        `;
+    }
+
+    function addInflowField(name="", amount="", year="") {
+        removeEmptyRow('inflowsTable');
+        const tbody = document.getElementById('inflowsTable').getElementsByTagName('tbody')[0];
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" value="${name}" class="i-name" placeholder="e.g. RSU Vest"></td>
+            <td><input type="number" value="${amount}" class="i-amount" placeholder="2500000"></td>
+            <td><input type="number" value="${year}" class="i-year" placeholder="6"></td>
+            <td><button class="delete-btn" onclick="removeRow(this, 'inflowsTable')">✕</button></td>
+        `;
+    }
+
+    function addRetirementIncomeField(name="", monthlyVal="", growth=5) {
+        removeEmptyRow('retirementIncomeTable');
+        const tbody = document.getElementById('retirementIncomeTable').getElementsByTagName('tbody')[0];
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><input type="text" value="${name}" class="r-name" placeholder="e.g. Rental Income"></td>
+            <td><input type="number" value="${monthlyVal}" class="r-val" placeholder="60000"></td>
+            <td><input type="number" value="${growth}" class="r-growth"></td>
+            <td><button class="delete-btn" onclick="removeRow(this, 'retirementIncomeTable')">✕</button></td>
+        `;
+    }
+
+    function removeRow(btn, tableId) {
+        const tbody = btn.closest('tbody');
+        btn.closest('tr').remove();
+        if (tbody.rows.length === 0) {
+            const emptyRow = tbody.insertRow();
+            emptyRow.className = 'empty-row';
+            const td = emptyRow.insertCell();
+            td.colSpan = 10;
+            td.textContent = 'No entries yet. Click the button below to add one.';
+        }
+    }
+
+    let globalReportData = null;
+
+    async function calculatePlan() {
+        const resultsArea = document.getElementById('resultsArea');
+        resultsArea.innerHTML = `
+            <div class="pending-state animate-in">
+                <div class="pending-icon">⏳</div>
+                <p>Simulating plan on Vercel... Please wait.</p>
+            </div>
+        `;
+        document.getElementById('exportBtnWrapper').style.display = 'none';
+
+        const clientNameString = document.getElementById('clientName').value.trim() || "The Client";
+        const currentAge = parseInt(document.getElementById('currentAge').value);
+        const retirementAge = parseInt(document.getElementById('retirementAge').value);
+        const monthlyExpense = parseFloat(document.getElementById('monthlyExpense').value);
+        const generalInflation = parseFloat(document.getElementById('inflation').value) / 100;
+        const equityRate = parseFloat(document.getElementById('riskAppetite').value) / 100;
+        const stepUp = parseFloat(document.getElementById('stepUp').value) / 100;
+        const initialCorpus = parseFloat(document.getElementById('currentCorpus').value) || 0;
+        const existingSip = parseFloat(document.getElementById('currentSip').value) || 0;
+
+        // Gather Sabbaticals
+        const sabbaticals = [];
+        document.querySelectorAll('#sabbaticalTable tbody tr:not(.empty-row)').forEach(row => {
+            sabbaticals.push({
+                name: row.querySelector('.s-name').value,
+                start: parseInt(row.querySelector('.s-start').value) || 0,
+                duration: parseInt(row.querySelector('.s-duration').value) || 0,
+                cost: parseFloat(row.querySelector('.s-cost').value) || 0
+            });
+        });
+
+        // Gather Bonuses
+        const recurringLumpsums = [];
+        document.querySelectorAll('#recurringLumpsumTable tbody tr:not(.empty-row)').forEach(row => {
+            recurringLumpsums.push({
+                name: row.querySelector('.rl-name').value,
+                amount: parseFloat(row.querySelector('.rl-amount').value) || 0,
+                freq: row.querySelector('.rl-freq').value,
+                step: parseFloat(row.querySelector('.rl-step').value) || 0
+            });
+        });
+
+        // Gather Goals
+        const goals = [];
+        document.querySelectorAll('#goalsContainer .goal-card').forEach(card => {
+            const loanToggle = card.querySelector('.goal-loan-toggle input[type="checkbox"]');
+            const hasLoan = loanToggle && loanToggle.checked;
+            goals.push({
+                name: card.querySelector('.g-name').value,
+                type: card.querySelector('.g-type').value,
+                cost: parseFloat(card.querySelector('.g-cost').value) || 0,
+                years: parseInt(card.querySelector('.g-years').value) || 0,
+                duration: parseInt(card.querySelector('.g-duration').value) || 1,
+                inflation: parseFloat(card.querySelector('.g-inflation').value) || 6,
+                hasLoan: hasLoan,
+                down: hasLoan ? (parseFloat(card.querySelector('.g-down').value) || 100) : 100,
+                tenure: hasLoan ? (parseInt(card.querySelector('.g-tenure').value) || 0) : 0,
+                rate: hasLoan ? (parseFloat(card.querySelector('.g-rate').value) || 0) : 0
+            });
+        });
+
+        // Gather Existing Loans
+        const currentLoans = [];
+        document.querySelectorAll('#loansTable tbody tr:not(.empty-row)').forEach(row => {
+            currentLoans.push({
+                name: row.querySelector('.l-name').value,
+                emi: parseFloat(row.querySelector('.l-emi').value) || 0,
+                years: parseInt(row.querySelector('.l-years').value) || 0,
+                redirect: row.querySelector('.l-redirect') ? row.querySelector('.l-redirect').checked : true
+            });
+        });
+
+        // Gather Inflows
+        const windfalls = [];
+        document.querySelectorAll('#inflowsTable tbody tr:not(.empty-row)').forEach(row => {
+            windfalls.push({
+                name: row.querySelector('.i-name').value,
+                amount: parseFloat(row.querySelector('.i-amount').value) || 0,
+                year: parseInt(row.querySelector('.i-year').value) || 0
+            });
+        });
+
+        // Gather Side Incomes
+        const sideIncomes = [];
+        document.querySelectorAll('#retirementIncomeTable tbody tr:not(.empty-row)').forEach(row => {
+            sideIncomes.push({
+                name: row.querySelector('.r-name').value,
+                val: parseFloat(row.querySelector('.r-val').value) || 0,
+                growth: parseFloat(row.querySelector('.r-growth').value) || 0
+            });
+        });
+
+        const payload = {
+            clientName: clientNameString,
+            currentAge,
+            retirementAge,
+            monthlyExpense,
+            inflation: document.getElementById('inflation').value,
+            stepUp: document.getElementById('stepUp').value,
+            currentCorpus: initialCorpus,
+            currentSip: existingSip,
+            riskAppetite: document.getElementById('riskAppetite').value,
+            sabbaticals,
+            bonuses: recurringLumpsums,
+            goals,
+            loans: currentLoans,
+            windfalls,
+            sideIncomes
+        };
+
+        try {
+            const response = await fetch('/api/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                const errList = data.errors || ["Unknown validation error"];
+                resultsArea.innerHTML = `
+                    <div class="animate-in" style="background:rgba(240,78,78,0.08);border:2px solid var(--danger);border-radius:var(--radius);padding:28px 30px;margin-bottom:22px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <span style="font-size:28px;">⛔</span>
+                            <div style="color:var(--danger);font-size:1.05rem;font-weight:800;">Validation Errors In Plan Config</div>
+                        </div>
+                        <ul style="color:var(--text-main);font-size:0.92rem;line-height:1.7;margin:0;padding-left:20px;">
+                            ${errList.map(err => `<li>${err}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                return;
+            }
+
+            const result = await response.json();
+            const isFeasible = result.success;
+            const targetRetirementCorpus = result.targetRetirementCorpus;
+            const mathematicallyRequiredSip = result.mathematicallyRequiredSip;
+            const accumulationLog = result.accumulationLog;
+            const postRetirementLog = result.postRetirementLog;
+
+            let auditHTML = ``;
+
+            // ── FAILURE PATH: Net Worth Negative ────────────────────────────
+            if (!isFeasible && result.failureInfo) {
+                const fi = result.failureInfo;
+                const failAge = currentAge + fi.year;
+                const sipFix = result.sipFix || mathematicallyRequiredSip;
+                const lumpsumFix = result.lumpsumFix || 0;
+                const sipIncrease = Math.max(0, sipFix - existingSip);
+
+                const failureHTML = `
+                    <div class="animate-in" style="background:rgba(240,78,78,0.08);border:2px solid var(--danger);border-radius:var(--radius);padding:28px 30px;margin-bottom:22px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <span style="font-size:28px;">⛔</span>
+                            <div>
+                                <div style="color:var(--danger);font-size:1.05rem;font-weight:800;letter-spacing:-0.01em;">Plan Cannot Proceed — Net Worth Goes Negative</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;margin-top:3px;">Simulation halted at Age ${failAge} (Year ${fi.year})</div>
+                            </div>
+                        </div>
+                        <p style="color:var(--text-main);font-size:0.92rem;line-height:1.7;margin:0 0 10px;">
+                            <strong>${fi.cause === 'goal' ? `Goal: "${fi.goalName}"` : fi.goalName}</strong> causes your portfolio to go into deficit at <strong>age ${failAge}</strong>.<br>
+                            Net worth after withdrawal: <strong style="color:var(--danger);">₹ ${(fi.netWorthAtFailure / 10000000).toFixed(2)} Cr</strong><br>
+                            ${fi.cause === 'goal' ? `Required: <strong>₹ ${Math.round(fi.requiredAmount).toLocaleString('en-IN')}</strong> — your corpus falls short.` : ''}
+                        </p>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 20px;">No further planning is shown beyond this point. To make this goal achievable, you have two options:</p>
+
+                        <div class="failure-options-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:10px;padding:18px 20px;">
+                                <div style="color:var(--accent-light);font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Option 1 — Increase Monthly SIP</div>
+                                <div style="color:#fff;font-size:1.5rem;font-weight:800;margin-bottom:6px;">+₹ ${Math.round(sipIncrease).toLocaleString('en-IN')}/mo</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;line-height:1.5;">Raise your SIP from <strong style="color:var(--text-main);">₹ ${Math.round(existingSip).toLocaleString('en-IN')}/mo</strong> to <strong style="color:var(--text-main);">₹ ${Math.round(sipFix).toLocaleString('en-IN')}/mo</strong> to fund this goal and still retire at age ${retirementAge}.</div>
+                            </div>
+                            <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:10px;padding:18px 20px;">
+                                <div style="color:var(--success);font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Option 2 — Invest a Lumpsum Today</div>
+                                <div style="color:#fff;font-size:1.5rem;font-weight:800;margin-bottom:6px;">₹ ${(lumpsumFix / 10000000).toFixed(2)} Cr</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;line-height:1.5;">Invest an additional <strong style="color:var(--text-main);">₹ ${Math.round(lumpsumFix).toLocaleString('en-IN')}</strong> as a lumpsum today (total corpus becomes ₹ \dots) to fully fund the plan.</div>
+                            </div>
+                        </div>
+                    </div>`;
+                resultsArea.innerHTML = failureHTML;
+                
+                // Truncate timeline to failure row
+                const tbody = document.getElementById('timelineTable').getElementsByTagName('tbody')[0];
+                tbody.innerHTML = "";
+                accumulationLog.forEach(row => {
+                    const tr = tbody.insertRow();
+                    const isSab = row.isSabbaticalActive;
+                    const isFailRow = row.isFailureYear;
+                    if (isFailRow) tr.style.cssText = 'background:rgba(240,78,78,0.12);outline:2px solid var(--danger);';
+                    tr.innerHTML = `
+                        <td><strong>${currentAge + row.year}</strong>${isFailRow ? ' <span style="color:var(--danger);font-size:0.72rem;font-weight:800;">⛔ FAIL</span>' : ''}</td>
+                        <td style="color:var(--text-muted);">Year ${row.year}</td>
+                        <td>${isSab ? '<span style="color:var(--text-faint)">On Sabbatical</span>' : '₹ ' + Math.round(row.baseSip).toLocaleString('en-IN')}</td>
+                        <td style="color:var(--danger);">${row.totalEmiOut > 0 ? '₹ ' + Math.round(row.totalEmiOut).toLocaleString('en-IN') : '—'}</td>
+                        <td style="color:var(--warning); font-weight:600;">${row.totalWithdrawalOut > 0 ? '₹ ' + Math.round(row.totalWithdrawalOut).toLocaleString('en-IN') : '—'}</td>
+                        <td style="color:${row.equity < 0 ? 'var(--danger)' : 'var(--accent-light)'};">₹ ${(row.equity / 100000).toFixed(2)} L</td>
+                        <td style="color:${row.hybrid < 0 ? 'var(--danger)' : 'var(--warning)'};">₹ ${(row.hybrid / 100000).toFixed(2)} L</td>
+                        <td style="color:${row.debt < 0 ? 'var(--danger)' : 'var(--success)'};">₹ ${(row.debt / 100000).toFixed(2)} L</td>
+                        <td><strong style="color:${row.totalNetWorth < 0 ? 'var(--danger)' : '#fff'};">₹ ${(row.totalNetWorth / 10000000).toFixed(2)} Cr</strong></td>
+                    `;
+                });
+                return;
+            }
+
+            // ── SUSTAINABILITY FAILURE: Drawdown exhaustion ────────────────────────────
+            let sustainFailHTML = '';
+            if (!isFeasible) {
+                let corpusExhaustsAtAge = retirementAge;
+                for (let i = 0; i < postRetirementLog.length; i++) {
+                    if (postRetirementLog[i].totalNetWorth <= 0) {
+                        corpusExhaustsAtAge = retirementAge + i + 1;
+                        break;
+                    }
+                }
+                if (corpusExhaustsAtAge === retirementAge) corpusExhaustsAtAge = 100;
+
+                const sipFix = result.sipFix || mathematicallyRequiredSip;
+                const lumpsumFix = result.lumpsumFix || 0;
+                const sipIncrease = Math.max(0, sipFix - existingSip);
+                const viableRetirementAge = result.viableRetirementAge;
+                const extraWorkYears = viableRetirementAge - retirementAge;
+
+                const finalAccumulationNetWorth = accumulationLog[accumulationLog.length - 1]?.totalNetWorth || 0;
+
+                sustainFailHTML = `
+                    <div class="animate-in" style="background:rgba(240,78,78,0.08);border:2px solid var(--danger);border-radius:var(--radius);padding:28px 30px;margin-bottom:22px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <span style="font-size:28px;">⚠️</span>
+                            <div>
+                                <div style="color:var(--danger);font-size:1.05rem;font-weight:800;letter-spacing:-0.01em;">Retirement Corpus Won't Last Until Age 100</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;margin-top:3px;">Corpus depletes at age ${corpusExhaustsAtAge} — ${100 - corpusExhaustsAtAge} year${100 - corpusExhaustsAtAge !== 1 ? 's' : ''} short of target</div>
+                            </div>
+                        </div>
+                        <p style="color:var(--text-main);font-size:0.92rem;line-height:1.7;margin:0 0 20px;">
+                            <strong>${clientNameString}</strong> accumulates <strong>₹ ${(finalAccumulationNetWorth / 10000000).toFixed(2)} Cr</strong> by retirement age ${retirementAge}, but the post-retirement drawdown runs out at <strong style="color:var(--danger);">age ${corpusExhaustsAtAge}</strong>. The required corpus to sustain the lifestyle to age 100 is <strong>₹ ${(targetRetirementCorpus / 10000000).toFixed(2)} Cr</strong>.
+                        </p>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                            <div style="background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:10px;padding:18px 20px;">
+                                <div style="color:var(--warning);font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Option 1 — Work Longer</div>
+                                <div style="color:#fff;font-size:1.5rem;font-weight:800;margin-bottom:6px;">${viableRetirementAge < 100 ? `Age ${viableRetirementAge}` : 'Not viable'}</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;line-height:1.5;">${viableRetirementAge < 100 ? `Retire <strong style="color:var(--text-main);">${extraWorkYears} year${extraWorkYears !== 1 ? 's' : ''} later</strong> at age ${viableRetirementAge} with no changes to SIP or goals — corpus then lasts to age 100.` : 'Working until age 99 with current SIP still cannot generate sufficient corpus.'}</div>
+                            </div>
+                            <div style="background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.2);border-radius:10px;padding:18px 20px;">
+                                <div style="color:var(--accent-light);font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Option 2 — Increase Monthly SIP</div>
+                                <div style="color:#fff;font-size:1.5rem;font-weight:800;margin-bottom:6px;">+₹ ${Math.round(sipIncrease).toLocaleString('en-IN')}/mo</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;line-height:1.5;">Raise SIP from <strong style="color:var(--text-main);">₹ ${Math.round(existingSip).toLocaleString('en-IN')}/mo</strong> to <strong style="color:var(--text-main);">₹ ${Math.round(mathematicallyRequiredSip).toLocaleString('en-IN')}/mo</strong> to hit the required corpus at retirement age ${retirementAge}.</div>
+                            </div>
+                            <div style="background:rgba(0,212,160,0.08);border:1px solid rgba(0,212,160,0.2);border-radius:10px;padding:18px 20px;">
+                                <div style="color:var(--success);font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">Option 3 — Invest Lumpsum Today</div>
+                                <div style="color:#fff;font-size:1.5rem;font-weight:800;margin-bottom:6px;">₹ ${(lumpsumFix / 10000000).toFixed(2)} Cr</div>
+                                <div style="color:var(--text-muted);font-size:0.82rem;line-height:1.5;">Invest <strong style="color:var(--text-main);">₹ ${Math.round(lumpsumFix).toLocaleString('en-IN')}</strong> as a lumpsum today (total corpus: ₹ ${((initialCorpus + lumpsumFix)/10000000).toFixed(2)} Cr) — sufficient to retire at ${retirementAge} with money lasting to 100.</div>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            if (!isFeasible) {
+                auditHTML += sustainFailHTML;
+            }
+
+            if (isFeasible) {
+                const lastPostRetNode = postRetirementLog[postRetirementLog.length - 1];
+                const corpusAt100 = lastPostRetNode ? lastPostRetNode.totalNetWorth : 0;
+                auditHTML += `<div class="feasibility-statement-card animate-in">
+                    <h3>Feasibility Verdict</h3>
+                    <p><span class="feasibility-badge badge-success">✓ On Track</span> <strong>${clientNameString}</strong> is on track to retire at age ${retirementAge}. Corpus lasts to age 100 with <strong>₹ ${(corpusAt100 / 10000000).toFixed(2)} Cr</strong> remaining.</p>
+                    <h4>Inflation-Adjusted Milestone Costs:</h4><ul>`;
+            } else {
+                auditHTML += `<div class="feasibility-statement-card animate-in">
+                    <h3>Goal Costs (Inflation-Adjusted)</h3>
+                    <h4>Inflation-Adjusted Milestone Costs:</h4><ul>`;
+            }
+
+            result.goals.forEach(g => {
+                auditHTML += `<li><strong>${g.name}</strong> — ₹ ${(g.pv/100000).toFixed(2)}L today → <strong>₹ ${Math.round(g.fv_at_start).toLocaleString('en-IN')}</strong> at start date (\${g.start_date})</li>`;
+            });
+            sabbaticals.forEach(s => {
+                let inflatedSabCost = s.cost * 12 * s.duration * Math.pow(1 + generalInflation, s.start);
+                auditHTML += `<li><strong>${s.name}</strong> sabbatical — \${s.duration}-year draw starting in year \${s.start}: <strong>₹ ` + Math.round(inflatedSabCost).toLocaleString('en-IN') + `</strong> total</li>`;
+            });
+            auditHTML += `</ul></div>`;
+
+            // Dashboard metrics
+            const statusClass = isFeasible ? "status-surplus" : "status-deficit";
+            const statusIcon = isFeasible ? "✅" : "⚠️";
+            const sipLabel = isFeasible ? "SIP: Position Stable" : "SIP: Top-Up Needed";
+            let sipValText, sipSubText;
+
+            if (existingSip >= mathematicallyRequiredSip) {
+                let surplusVal = existingSip - mathematicallyRequiredSip;
+                sipValText = `₹ \${Math.round(existingSip).toLocaleString('en-IN')} /mo`;
+                sipSubText = `<span style="color:var(--success); font-weight:700;">+₹ \${Math.round(surplusVal).toLocaleString('en-IN')}/mo surplus</span> over required minimum`;
+            } else {
+                let deficitVal = mathematicallyRequiredSip - existingSip;
+                sipValText = `₹ \${Math.round(mathematicallyRequiredSip).toLocaleString('en-IN')} /mo`;
+                sipSubText = `<span style="color:var(--danger); font-weight:700;">−₹ \${Math.round(deficitVal).toLocaleString('en-IN')}/mo gap</span> — increase SIP to get on track`;
+            }
+
+            let totalOutlaysValue = 0;
+            goals.forEach(g => { totalOutlaysValue += (g.cost * Math.pow(1 + g.inflation/100, g.years) * (g.down/100)); });
+            sabbaticals.forEach(s => { totalOutlaysValue += (s.cost * 12 * s.duration * Math.pow(1 + generalInflation, s.start)); });
+
+            let dashHTML = `<div class="dashboard animate-in">
+                <div class="metric-box">
+                    <div class="metric-header"><label>Target Retirement Corpus</label><div class="metric-icon">🏦</div></div>
+                    <div class="metric-val">₹ \${(targetRetirementCorpus / 10000000).toFixed(2)} Cr</div>
+                    <div class="metric-sub">Sustains lifestyle gap indefinitely post-retirement</div>
+                </div>
+                <div class="metric-box \${statusClass}">
+                    <div class="metric-header"><label>\${sipLabel}</label><div class="metric-icon">\${statusIcon}</div></div>
+                    <div class="metric-val">\${sipValText}</div>
+                    <div class="metric-sub">\${sipSubText}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-header"><label>Total Capital Outflows</label><div class="metric-icon">📤</div></div>
+                    <div class="metric-val">₹ \${(totalOutlaysValue / 10000000).toFixed(2)} Cr</div>
+                    <div class="metric-sub">Sum of all goal + sabbatical down payments / draws</div>
+                </div>
+            </div>`;
+
+            let chartHTML = `
+                <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                    <button id="chartToggleBtn" onclick="toggleChartMode()" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-muted);padding:7px 16px;border-radius:20px;font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.2s;">📊 Switch to Bar View</button>
+                </div>
+                <div class="chart-container animate-in"><canvas id="strategyChart"></canvas></div>`;
+
+            // EMI commitment schedule
+            const allLoanItems = [];
+            currentLoans.forEach(l => {
+                allLoanItems.push({ name: l.name, monthlyEmi: l.emi, startYr: 0, endYr: l.years, type: 'existing' });
+            });
+            goals.forEach(g => {
+                if (g.down < 100 && g.tenure > 0 && g.rate > 0) {
+                    const fc = g.cost * Math.pow(1 + g.inflation/100, g.years);
+                    const loanAmt = fc * (1 - g.down/100);
+                    const r = (g.rate/100) / 12, n = g.tenure * 12;
+                    const emi = (loanAmt * r * Math.pow(1+r,n)) / (Math.pow(1+r,n) - 1);
+                    allLoanItems.push({ name: `\${g.name} (Mortgage)`, monthlyEmi: emi, startYr: g.years + 1, endYr: g.years + 1 + g.tenure, type: 'goal' });
+                }
+            });
+
+            let emiHTML = '';
+            if (allLoanItems.length > 0) {
+                emiHTML = `<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;" class="animate-in">
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:14px;">📋 EMI Commitment Schedule</div>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                        <thead><tr>
+                            <th style="padding:8px 12px;text-align:left;color:var(--text-muted);font-size:0.72rem;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);">Loan</th>
+                            <th style="padding:8px 12px;text-align:left;color:var(--text-muted);font-size:0.72rem;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);">Monthly EMI</th>
+                            <th style="padding:8px 12px;text-align:left;color:var(--text-muted);font-size:0.72rem;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);">Active Period</th>
+                            <th style="padding:8px 12px;text-align:left;color:var(--text-muted);font-size:0.72rem;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);">Total Outflow</th>
+                        </tr></thead>
+                        <tbody>\${allLoanItems.map(l => `<tr>
+                            <td style="padding:8px 12px;color:var(--text-main);font-weight:600;border-bottom:1px solid rgba(255,255,255,0.04);">\${l.name}</td>
+                            <td style="padding:8px 12px;color:var(--danger);font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">₹ \${Math.round(l.monthlyEmi).toLocaleString('en-IN')} /mo</td>
+                            <td style="padding:8px 12px;color:var(--text-muted);border-bottom:1px solid rgba(255,255,255,0.04);">Age \${currentAge + l.startYr} – \${currentAge + l.endYr}</td>
+                            <td style="padding:8px 12px;color:var(--warning);font-weight:700;border-bottom:1px solid rgba(255,255,255,0.04);">₹ \${Math.round(l.monthlyEmi * 12 * (l.endYr - l.startYr)).toLocaleString('en-IN')}</td>
+                        </tr>`).join('')}</tbody>
+                    </table></div>
+                </div>`;
+            }
+
+            resultsArea.innerHTML = auditHTML + dashHTML + emiHTML + chartHTML;
+            document.getElementById('exportBtnWrapper').style.display = 'block';
+
+            // Populate Timeline table
+            const tbody = document.getElementById('timelineTable').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = "";
+
+            accumulationLog.forEach(row => {
+                const tr = tbody.insertRow();
+                const isSab = row.isSabbaticalActive;
+                tr.innerHTML = `
+                    <td><strong>\${currentAge + row.year}</strong></td>
+                    <td style="color:var(--text-muted);">Year \${row.year}</td>
+                    <td>\${isSab ? '<span style="color:var(--text-faint)">On Sabbatical</span>' : '₹ ' + Math.round(row.baseSip).toLocaleString('en-IN')}</td>
+                    <td style="color:var(--danger);">\${row.totalEmiOut > 0 ? '₹ ' + Math.round(row.totalEmiOut).toLocaleString('en-IN') : '—'}</td>
+                    <td style="color:var(--warning); font-weight:600;">\${row.totalWithdrawalOut > 0 ? '₹ ' + Math.round(row.totalWithdrawalOut).toLocaleString('en-IN') : '—'}</td>
+                    <td style="color:\${row.equity < 0 ? 'var(--danger)' : 'var(--accent-light)'};">₹ \${(row.equity / 100000).toFixed(2)} L</td>
+                    <td style="color:\${row.hybrid < 0 ? 'var(--danger)' : 'var(--warning)'};">₹ \${(row.hybrid / 100000).toFixed(2)} L</td>
+                    <td style="color:\${row.debt < 0 ? 'var(--danger)' : 'var(--success)'};">₹ \${(row.debt / 100000).toFixed(2)} L</td>
+                    <td><strong style="color:\${row.totalNetWorth < 0 ? 'var(--danger)' : '#fff'};">₹ \${(row.totalNetWorth / 10000000).toFixed(2)} Cr</strong></td>
+                `;
+            });
+
+            postRetirementLog.forEach((row, i) => {
+                const tr = tbody.insertRow();
+                tr.style.background = 'rgba(245,166,35,0.04)';
+                const age = retirementAge + i + 1;
+                const monthlyDraw = row.annualDraw > 0 ? '₹ ' + Math.round(row.annualDraw / 12).toLocaleString('en-IN') : '—';
+                tr.innerHTML = `
+                    <td><strong>\${age}</strong> <span style="color:var(--warning);font-size:0.7rem;font-weight:700;">RETIRED</span></td>
+                    <td style="color:var(--text-muted);">Post-Ret \${i + 1}</td>
+                    <td style="color:var(--text-faint);">—</td>
+                    <td style="color:var(--text-faint);">—</td>
+                    <td style="color:var(--warning); font-weight:600;">\${monthlyDraw}</td>
+                    <td style="color:var(--accent-light);">₹ \${(row.equity / 100000).toFixed(2)} L</td>
+                    <td style="color:var(--warning);">₹ \${(row.hybrid / 100000).toFixed(2)} L</td>
+                    <td style="color:var(--success);">₹ \${(row.debt / 100000).toFixed(2)} L</td>
+                    <td><strong style="color:\${row.totalNetWorth <= 0 ? 'var(--danger)' : '#fff'};">₹ \${(row.totalNetWorth / 10000000).toFixed(2)} Cr</strong></td>
+                `;
+            });
+
+            renderAllocationChart(accumulationLog, currentAge, postRetirementLog, retirementAge);
+
+            globalReportData = {
+                clientName: clientNameString,
+                currentAge,
+                retirementAge,
+                targetCorpus: (targetRetirementCorpus / 10000000).toFixed(2),
+                startingSip: Math.round(mathematicallyRequiredSip).toLocaleString('en-IN'),
+                currentSip: existingSip.toLocaleString('en-IN'),
+                sipGap: existingSip < mathematicallyRequiredSip ? Math.round(mathematicallyRequiredSip - existingSip).toLocaleString('en-IN') : null,
+                isFeasible,
+                riskAppetite: document.getElementById('riskAppetite').options[document.getElementById('riskAppetite').selectedIndex].text,
+                goals: result.goals,
+                loans: currentLoans,
+                sabbaticals,
+                recurringLumpsums,
+                timeline: accumulationLog,
+                statusAuditHTML: auditHTML
+            };
+
+        } catch (err) {
+            resultsArea.innerHTML = `
+                <div class="animate-in" style="background:rgba(240,78,78,0.08);border:2px solid var(--danger);border-radius:var(--radius);padding:28px 30px;margin-bottom:22px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <span style="font-size:28px;">⛔</span>
+                        <div style="color:var(--danger);font-size:1.05rem;font-weight:800;">Execution Error</div>
+                    </div>
+                    <p style="color:var(--text-main);font-size:0.92rem;line-height:1.7;margin:0;">
+                        An error occurred while running the simulation: ${err.message}
+                    </p>
+                </div>
+            `;
+        }
+    }
+    function renderAllocationChart(logData, startingAge, postRetirementData = [], retirementAge = null) {
+        lastChartArgs = [logData, startingAge, postRetirementData, retirementAge];
+        const ctx = document.getElementById('strategyChart').getContext('2d');
+        const accLabels = logData.map(r => `${startingAge + r.year}`);
+        const postLabels = postRetirementData.map((_, i) => `${(retirementAge || (startingAge + logData.length)) + i + 1}`);
+        const labels = [...accLabels, ...postLabels];
+
+        const fmt = v => parseFloat((v / 10000000).toFixed(2));
+        const postHasData = postRetirementData.length > 0 && typeof postRetirementData[0] === 'object';
+
+        const accEquity = logData.map(r => fmt(r.equity));
+        const accHybrid = logData.map(r => fmt(r.hybrid));
+        const accDebt   = logData.map(r => fmt(r.debt));
+        const accTotal  = logData.map(r => fmt(r.totalNetWorth));
+
+        const retEquity = postHasData ? postRetirementData.map(r => fmt(r.equity))       : postRetirementData;
+        const retHybrid = postHasData ? postRetirementData.map(r => fmt(r.hybrid))       : postRetirementData;
+        const retDebt   = postHasData ? postRetirementData.map(r => fmt(r.debt))         : postRetirementData;
+        const retTotal  = postHasData ? postRetirementData.map(r => fmt(r.totalNetWorth)): postRetirementData;
+
+        // post-retirement bars use 60% opacity to visually distinguish from accumulation
+        const retEquityBg = 'rgba(79,142,247,0.42)';
+        const retHybridBg = 'rgba(245,166,35,0.42)';
+        const retDebtBg   = 'rgba(0,212,160,0.42)';
+
+        if (strategyChartInstance) { strategyChartInstance.destroy(); }
+
+        const sharedOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { stacked: chartMode === 'bar', grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7a8ba8', font: { size: 11 }, maxTicksLimit: 14 } },
+                y: { stacked: chartMode === 'bar', grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7a8ba8', font: { size: 11 } }, title: { display: true, text: 'Portfolio Value (₹ Crores)', color: '#7a8ba8', font: { size: 12 } } }
+            },
+            plugins: {
+                legend: { labels: { color: '#94a3b8', padding: 20, usePointStyle: true, font: { size: 12 } } },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,41,0.95)',
+                    borderColor: 'rgba(79,142,247,0.3)',
+                    borderWidth: 1, padding: 14,
+                    titleColor: '#fff', bodyColor: '#94a3b8',
+                    callbacks: {
+                        title: (items) => `Age ${items[0].label}`,
+                        label: (item) => item.raw !== null ? ` ${item.dataset.label}: ₹${item.raw} Cr` : ''
+                    }
+                }
+            }
+        };
+
+        const lineDatasets = [
+            { type: 'line', label: 'Net Worth — Accumulation', data: [...accTotal, ...retTotal.map(() => null)], borderColor: '#6aa3ff', borderWidth: 2.5, pointRadius: 0, tension: 0.4, fill: false, yAxisID: 'y' },
+            { type: 'line', label: 'Corpus — Post-Retirement', data: [...accTotal.map(() => null), ...retTotal],  borderColor: '#f5a623', borderWidth: 2.5, borderDash: [6, 3], pointRadius: 0, tension: 0.4, fill: false, yAxisID: 'y' }
+        ];
+
+        const barDatasets = [
+            { type: 'bar',  label: 'Equity — Accumulation',    data: [...accEquity, ...retEquity.map(() => null)], backgroundColor: 'rgba(79,142,247,0.7)',  stack: 'pools' },
+            { type: 'bar',  label: 'Hybrid — Accumulation',    data: [...accHybrid, ...retHybrid.map(() => null)], backgroundColor: 'rgba(245,166,35,0.7)',  stack: 'pools' },
+            { type: 'bar',  label: 'Debt — Accumulation',      data: [...accDebt,   ...retDebt.map(  () => null)], backgroundColor: 'rgba(0,212,160,0.7)',   stack: 'pools' },
+            { type: 'bar',  label: 'Equity — Post-Retirement', data: [...accEquity.map(() => null), ...retEquity],  backgroundColor: retEquityBg, stack: 'pools' },
+            { type: 'bar',  label: 'Hybrid — Post-Retirement', data: [...accHybrid.map(() => null), ...retHybrid],  backgroundColor: retHybridBg, stack: 'pools' },
+            { type: 'bar',  label: 'Debt — Post-Retirement',   data: [...accDebt.map(  () => null), ...retDebt],    backgroundColor: retDebtBg,   stack: 'pools' },
+            { type: 'line', label: 'Total Net Worth (Cr)',      data: [...accTotal, ...retTotal], borderColor: '#fff', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false, yAxisID: 'y' }
+        ];
+
+        strategyChartInstance = new Chart(ctx, {
+            data: { labels, datasets: chartMode === 'line' ? lineDatasets : barDatasets },
+            options: sharedOptions
+        });
+    }
+
+    function saveProfile() {
+        const profile = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            profile: {
+                clientName:     document.getElementById('clientName').value,
+                currentAge:     document.getElementById('currentAge').value,
+                retirementAge:  document.getElementById('retirementAge').value,
+                riskAppetite:   document.getElementById('riskAppetite').value,
+                currentCorpus:  document.getElementById('currentCorpus').value,
+                currentSip:     document.getElementById('currentSip').value,
+                monthlyExpense: document.getElementById('monthlyExpense').value,
+                inflation:      document.getElementById('inflation').value,
+                stepUp:         document.getElementById('stepUp').value
+            },
+            sabbaticals: [],
+            goals: [],
+            bonuses: [],
+            loans: [],
+            windfalls: [],
+            sideIncomes: []
+        };
+        document.querySelectorAll('#sabbaticalTable tbody tr:not(.empty-row)').forEach(r => {
+            profile.sabbaticals.push({ name: r.querySelector('.s-name').value, start: r.querySelector('.s-start').value, duration: r.querySelector('.s-duration').value, cost: r.querySelector('.s-cost').value });
+        });
+        document.querySelectorAll('#goalsContainer .goal-card').forEach(card => {
+            const loanToggle = card.querySelector('.goal-loan-toggle input[type="checkbox"]');
+            const hasLoan = loanToggle && loanToggle.checked;
+            profile.goals.push({
+                name: card.querySelector('.g-name').value, type: card.querySelector('.g-type').value,
+                cost: card.querySelector('.g-cost').value, years: card.querySelector('.g-years').value,
+                duration: card.querySelector('.g-duration').value, inflation: card.querySelector('.g-inflation').value,
+                hasLoan, down: card.querySelector('.g-down').value, tenure: card.querySelector('.g-tenure').value, rate: card.querySelector('.g-rate').value
+            });
+        });
+        document.querySelectorAll('#recurringLumpsumTable tbody tr:not(.empty-row)').forEach(r => {
+            profile.bonuses.push({ name: r.querySelector('.rl-name').value, amount: r.querySelector('.rl-amount').value, freq: r.querySelector('.rl-freq').value, step: r.querySelector('.rl-step').value });
+        });
+        document.querySelectorAll('#loansTable tbody tr:not(.empty-row)').forEach(r => {
+            profile.loans.push({ name: r.querySelector('.l-name').value, emi: r.querySelector('.l-emi').value, years: r.querySelector('.l-years').value, redirect: r.querySelector('.l-redirect') ? r.querySelector('.l-redirect').checked : true });
+        });
+        document.querySelectorAll('#inflowsTable tbody tr:not(.empty-row)').forEach(r => {
+            profile.windfalls.push({ name: r.querySelector('.i-name').value, amount: r.querySelector('.i-amount').value, year: r.querySelector('.i-year').value });
+        });
+        document.querySelectorAll('#retirementIncomeTable tbody tr:not(.empty-row)').forEach(r => {
+            profile.sideIncomes.push({ name: r.querySelector('.r-name').value, val: r.querySelector('.r-val').value, growth: r.querySelector('.r-growth').value });
+        });
+        const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `${profile.profile.clientName || 'client'}-financial-plan.json`;
+        a.click(); URL.revokeObjectURL(url);
+    }
+
+    function importProfile(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            try {
+                const d = JSON.parse(e.target.result);
+                if (!d.version || !d.profile) { alert('Invalid profile file.'); return; }
+                const p = d.profile;
+                document.getElementById('clientName').value     = p.clientName     || '';
+                document.getElementById('currentAge').value     = p.currentAge     || 32;
+                document.getElementById('retirementAge').value  = p.retirementAge  || 55;
+                document.getElementById('riskAppetite').value   = p.riskAppetite   || 14;
+                document.getElementById('currentCorpus').value  = p.currentCorpus  || 0;
+                document.getElementById('currentSip').value     = p.currentSip     || 0;
+                document.getElementById('monthlyExpense').value = p.monthlyExpense || 0;
+                document.getElementById('inflation').value      = p.inflation      || 6;
+                document.getElementById('stepUp').value         = p.stepUp         || 10;
+                updateHeaderChips();
+
+                // Clear all dynamic sections
+                ['sabbaticalTable','recurringLumpsumTable','loansTable','inflowsTable','retirementIncomeTable'].forEach(id => {
+                    const tbody = document.getElementById(id).getElementsByTagName('tbody')[0];
+                    tbody.innerHTML = ''; const er = tbody.insertRow(); er.className='empty-row'; const td=er.insertCell(); td.colSpan=10; td.textContent='No entries yet. Click the button below to add one.';
+                });
+                const gc = document.getElementById('goalsContainer'); gc.innerHTML = ''; goalCounter = 0;
+                const ge = document.createElement('div'); ge.className='goals-empty'; ge.textContent='No goals added yet. Click the button below to add one.'; gc.appendChild(ge);
+
+                (d.sabbaticals||[]).forEach(s => addSabbaticalField(s.name, s.start, s.duration, s.cost));
+                (d.goals||[]).forEach(g => addGoalField(g.name, g.type, g.cost, g.years, g.duration, g.inflation, g.hasLoan ? g.down : 100, g.tenure, g.rate));
+                (d.bonuses||[]).forEach(b => addRecurringLumpsumField(b.name, b.amount, b.freq, b.step));
+                (d.loans||[]).forEach(l => addLoanField(l.name, l.emi, l.years, l.redirect !== false));
+                (d.windfalls||[]).forEach(w => addInflowField(w.name, w.amount, w.year));
+                (d.sideIncomes||[]).forEach(s => addRetirementIncomeField(s.name, s.val, s.growth));
+                alert(`Profile for "${p.clientName || 'client'}" loaded successfully.`);
+            } catch(err) { alert('Failed to parse profile: ' + err.message); }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    function exportPDF() {
+        if (!globalReportData) return;
+        const d = globalReportData;
+        const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+        const yr = new Date().getFullYear();
+        const yearsLeft = d.retirementAge - d.currentAge;
+        const firstName = d.clientName.split(' ')[0] || d.clientName;
+        const sc = d.isFeasible ? '#059669' : '#dc2626';
+        const sb = d.isFeasible ? '#ecfdf5' : '#fff5f5';
+        const inf = parseFloat(document.getElementById('inflation').value);
+        const verdict = d.isFeasible
+            ? `${firstName}'s current investment run-rate is sufficient to meet the retirement target. The portfolio is projected to reach the required corpus with a surplus cushion, providing resilience against unexpected inflation or market underperformance.`
+            : `${firstName}'s current monthly SIP falls short of the required minimum. An immediate increase of ₹${d.sipGap}/mo will close this gap and lock in the retirement timeline at age ${d.retirementAge}.`;
+
+        // ── row builders ──────────────────────────────────────────
+        const tRow = (cols, bg) => `<tr>${cols.map(([txt, clr, bold, align]) =>
+            `<td class="tc" style="background:${bg};color:${clr||'#1e293b'};font-weight:${bold?700:400};text-align:${align||'left'};">${txt}</td>`
+        ).join('')}</tr>`;
+
+        const timelineRows = d.timeline.map((r, i) => {
+            const bg = r.isSabbaticalActive ? '#fffbeb' : i % 2 ? '#f8fafc' : '#fff';
+            const sip = r.isSabbaticalActive ? '<span class="sab-tag">SABBATICAL</span>' : `₹${Math.round(r.baseSip).toLocaleString('en-IN')}`;
+            return tRow([
+                [`<strong>${d.currentAge + r.year}</strong>`, '#1e3a8a', true],
+                [sip, '#374151'],
+                [r.totalEmiOut > 0 ? `₹${Math.round(r.totalEmiOut).toLocaleString('en-IN')}` : '—', r.totalEmiOut > 0 ? '#dc2626' : '#9ca3af'],
+                [r.totalWithdrawalOut > 0 ? `₹${Math.round(r.totalWithdrawalOut).toLocaleString('en-IN')}` : '—', r.totalWithdrawalOut > 0 ? '#b45309' : '#9ca3af'],
+                [`₹${(r.equity/10000000).toFixed(2)} Cr`, '#1d4ed8'],
+                [`₹${(r.hybrid/10000000).toFixed(2)} Cr`, '#b45309'],
+                [`₹${(r.debt/10000000).toFixed(2)} Cr`, '#059669'],
+                [`₹${(r.totalNetWorth/10000000).toFixed(2)} Cr`, '#1e3a8a', true, 'right'],
+            ], bg);
+        }).join('');
+
+        const goalRows = d.goals.length ? d.goals.map((g, i) => {
+            const fc = g.cost * Math.pow(1 + g.inflation, g.startYear);
+            const loan = g.downPercent < 1 ? `${(g.downPercent*100).toFixed(0)}% down · ${g.loanTenure}yr @ ${(g.loanRate*100).toFixed(1)}%` : 'Full cash';
+            return tRow([
+                [g.name, '#1e293b', true],
+                [g.type, '#6b7280'],
+                [`₹${(g.cost/100000).toFixed(1)}L`, '#374151'],
+                [`Age ${d.currentAge + g.startYear}`, '#2563eb'],
+                [`${(g.inflation*100).toFixed(0)}%`, '#374151'],
+                [`₹${Math.round(fc).toLocaleString('en-IN')}`, '#1e3a8a', true],
+                [loan, g.downPercent < 1 ? '#7c3aed' : '#6b7280'],
+            ], i % 2 ? '#f8fafc' : '#fff');
+        }).join('') : `<tr><td colspan="7" class="empty-td">No goals added.</td></tr>`;
+
+        const sabRows = d.sabbaticals.length ? d.sabbaticals.map((s, i) => {
+            const total = s.monthlyCostToday * 12 * s.duration * Math.pow(1 + inf/100, s.startYear);
+            return tRow([
+                [s.name, '#1e293b', true],
+                [`Age ${d.currentAge + s.startYear}`, '#2563eb'],
+                [`${s.duration} yr`, '#374151'],
+                [`₹${s.monthlyCostToday.toLocaleString('en-IN')}/mo`, '#374151'],
+                [`₹${Math.round(total).toLocaleString('en-IN')}`, '#b45309', true],
+            ], i % 2 ? '#f8fafc' : '#fff');
+        }).join('') : `<tr><td colspan="5" class="empty-td">No sabbaticals planned.</td></tr>`;
+
+        const loanRows = d.loans.length ? d.loans.map((l, i) =>
+            tRow([
+                [l.name, '#1e293b', true],
+                [`₹${l.emi.toLocaleString('en-IN')}/mo`, '#dc2626'],
+                [`${l.years} yr`, '#374151'],
+                [`₹${(l.emi * 12 * l.years).toLocaleString('en-IN')}`, '#dc2626', true],
+            ], i % 2 ? '#f8fafc' : '#fff')
+        ).join('') : `<tr><td colspan="4" class="empty-td">No existing loans.</td></tr>`;
+
+        const rlRows = d.recurringLumpsums.length ? d.recurringLumpsums.map((rl, i) =>
+            tRow([
+                [rl.name, '#1e293b', true],
+                [`₹${rl.amountToday.toLocaleString('en-IN')}`, '#374151'],
+                [rl.frequency, '#6b7280'],
+                [`${(rl.stepUp*100).toFixed(0)}% p.a.`, '#059669'],
+            ], i % 2 ? '#f8fafc' : '#fff')
+        ).join('') : `<tr><td colspan="4" class="empty-td">No recurring inflows.</td></tr>`;
+
+        // ── section / table helpers ────────────────────────────────
+        const sec = (title, sub) => `
+            <div class="sec-head">
+                <div class="sec-title">${title}</div>
+                ${sub ? `<div class="sec-sub">${sub}</div>` : ''}
+            </div>`;
+
+        const thead = (...cols) => `<thead><tr>${cols.map(c =>
+            `<th class="th">${c}</th>`
+        ).join('')}</tr></thead>`;
+
+        // ── full HTML document ─────────────────────────────────────
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${d.clientName} — Financial Blueprint ${yr}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 13px;
+    color: #1e293b;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── COVER ── */
+  .cover {
+    background: #1e3a8a;
+    padding: 70px 72px 60px;
+    min-height: 260px;
+  }
+  .cover-eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 10px;
+  }
+  .cover-name {
+    font-size: 46px; font-weight: 900; letter-spacing: -0.03em;
+    color: #fff; line-height: 1.05; margin-bottom: 8px;
+  }
+  .cover-sub {
+    font-size: 15px; font-weight: 500; color: #93c5fd; margin-bottom: 48px;
+  }
+  .cover-stats { display: flex; gap: 48px; }
+  .cover-stat-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(255,255,255,0.4); margin-bottom: 4px;
+  }
+  .cover-stat-val { font-size: 22px; font-weight: 800; color: #fff; }
+
+  /* ── BODY ── */
+  .body { padding: 48px 72px; max-width: 900px; }
+
+  /* ── STATUS BANNER ── */
+  .status-banner {
+    border-radius: 10px; border: 1.5px solid ${sc};
+    background: ${sb}; padding: 22px 26px; margin: 32px 0 36px;
+  }
+  .status-pill {
+    display: inline-block; background: ${sc}; color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 4px 12px; border-radius: 4px; margin-bottom: 12px;
+  }
+  .status-text { font-size: 14px; line-height: 1.75; color: #1e293b; }
+
+  /* ── METRICS ── */
+  .metrics { display: flex; gap: 16px; margin-bottom: 40px; }
+  .metric-card {
+    flex: 1; border-radius: 10px; padding: 20px 22px;
+    border: 1px solid #e2e8f0;
+  }
+  .metric-card.blue  { background: #eff6ff; border-color: #bfdbfe; }
+  .metric-card.green { background: #f0fdf4; border-color: #bbf7d0; }
+  .metric-card.status { background: ${sb}; border-color: ${sc}; }
+  .metric-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 8px;
+  }
+  .metric-card.blue   .metric-label { color: #2563eb; }
+  .metric-card.green  .metric-label { color: #059669; }
+  .metric-card.status .metric-label { color: ${sc}; }
+  .metric-val { font-size: 26px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .metric-card.blue   .metric-val { color: #1e3a8a; }
+  .metric-card.green  .metric-val { color: #065f46; }
+  .metric-card.status .metric-val { color: ${sc}; }
+  .metric-desc { font-size: 11px; color: #64748b; line-height: 1.5; }
+
+  /* ── SECTION HEADERS ── */
+  .sec-head { margin: 40px 0 14px; padding-left: 16px; border-left: 4px solid #2563eb; }
+  .sec-title { font-size: 17px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+  .sec-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+
+  /* ── NARRATIVE ── */
+  .narrative p { font-size: 13.5px; color: #334155; line-height: 1.85; margin-bottom: 14px; }
+  .narrative strong { color: #1e3a8a; }
+
+  /* ── TABLES ── */
+  table { width: 100%; border-collapse: collapse; }
+  .th {
+    padding: 10px 13px; background: #1e3a8a; color: #fff;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; text-align: left; border: none;
+  }
+  .tc {
+    padding: 9px 13px; font-size: 12px; border-bottom: 1px solid #f1f5f9;
+  }
+  .empty-td {
+    padding: 18px; text-align: center; color: #9ca3af;
+    font-style: italic; font-size: 12px;
+  }
+  .sab-tag {
+    display: inline-block; background: #fef9c3; color: #854d0e;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 3px;
+  }
+
+  /* ── DISCLAIMER ── */
+  .disclaimer {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 18px 22px; margin-top: 14px;
+  }
+  .disclaimer li { font-size: 11.5px; color: #64748b; line-height: 1.85; margin-bottom: 4px; }
+  .disclaimer li strong { color: #374151; }
+
+  /* ── FOOTER ── */
+  .page-footer {
+    margin-top: 48px; padding-top: 18px; border-top: 1px solid #e2e8f0;
+    text-align: center; font-size: 10.5px; color: #94a3b8; letter-spacing: 0.02em;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    @page { size: A4; margin: 0; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page-break { page-break-before: always; }
+    .no-break { page-break-inside: avoid; }
+    .th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .metric-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .status-banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .status-pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .sab-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-eyebrow">Confidential &nbsp;·&nbsp; Prepared exclusively for</div>
+  <div class="cover-name">${d.clientName}</div>
+  <div class="cover-sub">Personal Financial Architecture &amp; Retirement Blueprint</div>
+  <div class="cover-stats">
+    <div><div class="cover-stat-label">Current Age</div><div class="cover-stat-val">${d.currentAge}</div></div>
+    <div><div class="cover-stat-label">Retirement Target</div><div class="cover-stat-val">Age ${d.retirementAge}</div></div>
+    <div><div class="cover-stat-label">Accumulation Horizon</div><div class="cover-stat-val">${yearsLeft} Years</div></div>
+    <div><div class="cover-stat-label">Report Date</div><div class="cover-stat-val" style="font-size:16px;margin-top:3px;">${today}</div></div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- STATUS -->
+  <div class="status-banner no-break">
+    <div class="status-pill">${d.isFeasible ? '✓ On Track' : '⚠ Top-Up Required'}</div>
+    <div class="status-text">${verdict}</div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics no-break">
+    <div class="metric-card blue">
+      <div class="metric-label">Target Corpus</div>
+      <div class="metric-val">₹${d.targetCorpus} Cr</div>
+      <div class="metric-desc">Perpetual nest egg needed at age ${d.retirementAge} to sustain lifestyle indefinitely</div>
+    </div>
+    <div class="metric-card status">
+      <div class="metric-label">Required Monthly SIP</div>
+      <div class="metric-val">₹${d.startingSip}</div>
+      <div class="metric-desc">Current: ₹${d.currentSip}/mo &nbsp;·&nbsp; ${d.sipGap ? `Gap: ₹${d.sipGap}` : 'No top-up needed'}</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-label">Investment Strategy</div>
+      <div class="metric-val" style="font-size:16px;margin-top:4px;">${d.riskAppetite.split('(')[0].trim()}</div>
+      <div class="metric-desc">${d.riskAppetite.match(/\(([^)]+)\)/)?.[1] || ''} projected annual equity return</div>
+    </div>
+  </div>
+
+  <!-- NARRATIVE -->
+  ${sec(`${firstName}'s Retirement Roadmap`, 'A plain-English summary of the full strategy')}
+  <div class="narrative">
+    <p>${firstName} is <strong>${d.currentAge} years old</strong> today and is targeting financial independence at <strong>age ${d.retirementAge}</strong>, giving a <strong>${yearsLeft}-year accumulation window</strong>. Based on the current monthly lifestyle spend and a <strong>${inf}% annual inflation assumption</strong>, the retirement corpus needed to sustain ${firstName}'s lifestyle indefinitely — without ever drawing down principal — is <strong>₹${d.targetCorpus} Crores</strong>.</p>
+    <p>The plan uses a <strong>${d.riskAppetite}</strong> mandate for the primary equity pool during accumulation. A <strong>5-year glide path</strong> automatically migrates capital from equity into hybrid and then debt instruments as each financial goal approaches, locking in gains and protecting against late-stage market volatility.</p>
+    ${d.sabbaticals.length ? `<p>${firstName} has planned <strong>${d.sabbaticals.length} sabbatical period${d.sabbaticals.length > 1 ? 's' : ''}</strong> — during which SIP contributions pause and the portfolio funds living expenses directly. These breaks are fully factored into the simulation.</p>` : ''}
+    ${d.loans.length ? `<p>Existing loan EMIs reduce the net investable surplus during their active tenure. Once these obligations clear, the freed-up cash flow is <strong>automatically redirected into the investment pool</strong>, accelerating compounding.</p>` : ''}
+  </div>
+
+  <!-- GOALS -->
+  ${sec('Financial Goals & Capital Milestones', 'Inflation-adjusted future cost of each planned goal')}
+  <div class="no-break">
+    <table>${thead('Goal', 'Type', "Today's Value", 'At Age', 'Inflation', 'Future Cost', 'Funding')}
+    <tbody>${goalRows}</tbody></table>
+  </div>
+
+  <!-- SABBATICALS -->
+  ${sec('Career Sabbaticals', 'Portfolio drawdowns during planned income-free periods')}
+  <div class="no-break">
+    <table>${thead('Sabbatical', 'Starts At', 'Duration', 'Monthly Budget', 'Total Draw (Future ₹)')}
+    <tbody>${sabRows}</tbody></table>
+  </div>
+
+  <!-- LOANS -->
+  ${sec('Existing Liabilities', 'Pre-existing EMI commitments and aggregate outflow')}
+  <div class="no-break">
+    <table>${thead('Loan', 'Monthly EMI', 'Remaining Tenure', 'Total Outflow')}
+    <tbody>${loanRows}</tbody></table>
+  </div>
+
+  <!-- RECURRING LUMPSUMS -->
+  ${sec('Recurring Bonuses & Payouts', 'Periodic inflows that accelerate the equity compounding engine')}
+  <div class="no-break">
+    <table>${thead('Source', 'Base Amount', 'Frequency', 'Annual Step-Up')}
+    <tbody>${rlRows}</tbody></table>
+  </div>
+
+  <!-- DISCLAIMER -->
+  ${sec('Assumptions & Disclaimers')}
+  <ul class="disclaimer">
+    <li>Equity return assumed at <strong>${d.riskAppetite.match(/\(([^)]+)\)/)?.[1] || 'stated rate'}</strong>. Hybrid buffer: <strong>10% p.a.</strong> Debt vault: <strong>8% p.a.</strong> These are projections, not guarantees.</li>
+    <li>Lifestyle inflation assumed at <strong>${inf}% per annum</strong>. Actual inflation may vary.</li>
+    <li>The target corpus uses a <strong>perpetual withdrawal model</strong> — designed to sustain lifestyle indefinitely without exhausting principal.</li>
+    <li>This document is generated by a personal financial planning tool and does <strong>not constitute registered financial advice</strong>. Consult a SEBI-registered investment advisor before making financial decisions.</li>
+  </ul>
+
+  <div class="page-footer">Generated ${today} &nbsp;·&nbsp; Wealth Planner &nbsp;·&nbsp; Confidential — prepared exclusively for ${d.clientName}</div>
+
+  <!-- PAGE 2: TIMELINE -->
+  <div class="page-break"></div>
+  ${sec('Year-by-Year Portfolio Timeline', `Full ${yearsLeft}-year accumulation ledger — all capital pools and net worth progression`)}
+  <table>
+    ${thead('Age', 'Monthly SIP', 'EMI', 'Withdrawals', 'Equity', 'Hybrid', 'Debt', 'Net Worth')}
+    <tbody>${timelineRows}</tbody>
+  </table>
+
+  <div class="page-footer" style="margin-top:32px;">${d.clientName} — Personal Financial Blueprint &nbsp;·&nbsp; ${today}</div>
+
+</div>
+
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+    }
+</script>
+</body>
+</html>
